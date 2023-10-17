@@ -1,0 +1,3 @@
+-- careful, this clientside code is very complicated....
+
+include( "shared.lua" )

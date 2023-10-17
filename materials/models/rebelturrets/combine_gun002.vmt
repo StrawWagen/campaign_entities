@@ -1,0 +1,12 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "models/rebelturrets/combine_gun002"
+	"$surfaceprop" "metal"
+	"$bumpmap" "models/rebelturrets/combine_gun002_normal"
+	"$phong" 1
+	"$phongexponent" "10"
+	"$phongboost" "4"
+	"$phongalbedotint" 1										
+	"$phongfresnelranges"	"[.1 .5  1]"
+	"$selfillum" 1
+}
