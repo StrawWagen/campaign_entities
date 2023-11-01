@@ -23,6 +23,7 @@ end
 
 function ENT:Initialize()
     if SERVER then
+        self.overRidden = nil
         self.Enabled = nil
         self.OldEnabled = nil
         self:SetModel( self.Model )
@@ -159,7 +160,7 @@ function ENT:ManagePlysWeapons( ply )
                 ply:StripWeapons()
 
             end
-            -- they died or exited noclip
+            -- they died
             if ply.campaignEnts_NeedsLoadoutRefresh then
                 ply:StripWeapons()
                 if self:GetWeaponsPersistOnDeath() then
@@ -168,8 +169,10 @@ function ENT:ManagePlysWeapons( ply )
                 end
                 ply.campaignEnts_NeedsLoadoutRefresh = nil
 
+            -- they exited noclip
             else
-                self:GivePlyWeapons( ply, ply.campaignEnts_BlockerPickedUpWeaps, true )
+                ply:StripWeapons()
+                self:GivePlyWeapons( ply, ply.campaignEnts_BlockerPickedUpWeaps, false )
 
             end
         elseif enabled ~= true then
@@ -199,6 +202,7 @@ function ENT:OnRemove()
     if self.overRidden then return end
     for _, ply in ipairs( player.GetAll() ) do
         self:RestoreOldLoadout( ply )
+        --print( ply )
         ply.campaignEnts_BlockerHasPickedUpWeaps = nil
         ply.campaignEnts_BlockerPickedUpWeaps = nil
 
@@ -242,13 +246,15 @@ end )
 hook.Add( "PlayerCanPickupWeapon", "weapon_blocker_validpickupweapon", function( ply, weap )
     if not ActiveBlocker() then return end
 
-    if ply.campaignEnts_WeapBlockerHandlingRespawn then return false end
+    if ply.campaignEnts_WeapBlockerHandling then return end -- within ManagePlysWeapons
+    if ply.campaignEnts_WeapBlockerHandlingRespawn then return end
 
     if not ply.campaignEnts_BlockerHasPickedUpWeaps then ply.campaignEnts_BlockerHasPickedUpWeaps = {} end
     if not ply.campaignEnts_BlockerPickedUpWeaps then ply.campaignEnts_BlockerPickedUpWeaps = {} end
 
     local class = weap:GetClass()
     if not ply.campaignEnts_BlockerHasPickedUpWeaps[class] then
+        --print( "pickup " .. class )
         ply.campaignEnts_BlockerHasPickedUpWeaps[class] = true
         table.insert( ply.campaignEnts_BlockerPickedUpWeaps, class )
 
