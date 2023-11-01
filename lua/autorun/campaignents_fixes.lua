@@ -7,3 +7,8 @@ hook.Add( "OnEntityCreated", "campaignents_genericfixes", function( ent )
 
     end
 end )
+
+hook.Add( "PhysgunPickup", "campaignents_respect_physdisabled", function( _, pickedUp )
+    if IsValid( pickedUp ) and pickedUp.PhysgunDisabled then return false end
+
+end )

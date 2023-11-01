@@ -38,8 +38,11 @@ end
 function ENT:SetupSessionVars()
     self.doDissolveTime = 0
     self.nextCreateSound = 0
+    self.redoTheShieldSound = 0
     self.buzzerSoundsPlaying = {}
     self.fieldShouldCollideCache = {}
+    self.field_loopingSound = nil
+    self.field_loopingSoundDummy = nil
     self.oldPositionProductLeng = 0
     self.shieldIsOn = true -- starts on?!?!?
     self.isForceField = true
@@ -96,7 +99,6 @@ function ENT:Initialize()
         if not self:IsValid() then return end
 
         local dummyEndPos = self.dummyEndPos
-        print( dummyEndPos )
         local dummyEndAng = self.dummyEndAng
         if not dummyEndPos or not dummyEndAng then
             dummyEndAng = self:GetAngles()
@@ -290,24 +292,41 @@ function ENT:Think()
 
     end
 
+    if math.abs( self:GetCreationTime() - CurTime() ) < 0.25 then return end
 
     local dummyEnd = self:GetNWEntity( "dummyend" )
+    -- fix it not playing sometimes
+    local redoTheShieldSound = self.redoTheShieldSound < CurTime()
 
     if self.shieldIsOn then
         if not self.field_loopingSound then
             self:EmitSound( "campaign_entities/combineshield_activate.wav", 80, math.random( 95, 105 ) )
 
+        end
+        if not self.field_loopingSound or redoTheShieldSound then
+            if self.field_loopingSound then
+                self.field_loopingSound:Stop()
+
+            end
             self.field_loopingSound = CreateSound( self, "ambient/machines/combine_shield_loop3.wav" )
             self.field_loopingSound:Play()
             self.field_loopingSound:ChangeVolume( 0.5, 0 )
+            self.redoTheShieldSound = CurTime() + math.random( 10, 20 )
 
         end
         if not self.field_loopingSoundDummy then
             dummyEnd:EmitSound( "campaign_entities/combineshield_activate.wav", 80, math.random( 95, 105 ) )
 
+        end
+        if not self.field_loopingSoundDummy or redoTheShieldSound then
+            if self.field_loopingSoundDummy then
+                self.field_loopingSoundDummy:Stop()
+
+            end
             self.field_loopingSoundDummy = CreateSound( dummyEnd, "ambient/machines/combine_shield_loop3.wav" )
             self.field_loopingSoundDummy:Play()
             self.field_loopingSoundDummy:ChangeVolume( 0.5, 0 )
+            self.redoTheShieldSound = CurTime() + math.random( 10, 20 )
 
         end
     elseif not self.shieldIsOn then
@@ -451,29 +470,16 @@ local function fieldShouldCollide( field, colliding )
     if hookResult then
         return hookResult
 
-    elseif collidingsClass == "campaignents_npcgoal" or collidingsClass == "campaignents_combatnode" then
-        return false
-
-    elseif collidingsClass == "campaignents_forcefield_plug" then
-        return false
-
-    elseif colliding:GetModel() == "models/combine_apc.mdl" then
-        return false
-
-    elseif colliding:IsNPC() and ( combineClasses[collidingsClass] or isCombineModel( colliding:GetModel() ) ) then
-        return false
-
-    elseif collidingsClass == "npc_grenade_frag" then
-        return false
-
-    elseif collidingsClass == "prop_combine_ball" then
-        return false
+    elseif colliding:IsNPC() and not ( combineClasses[collidingsClass] or isCombineModel( colliding:GetModel() ) ) then
+        return true
 
     elseif colliding:IsPlayer() then
         local mdl = colliding:GetModel()
         if field:GetAllowCombinePlys() and isCombineModel( mdl ) then return false end
+        return true
+
     end
-    return true
+    return false
 
 end
 

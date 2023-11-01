@@ -222,6 +222,11 @@ function ENT:TriggerInput( iname, value )
     end
 end
 
+function ENT:Draw()
+    self:DrawModel()
+
+end
+
 function ENT:DoColor()
     if not CLIENT then return end
     col = self:GetDebugColor():ToColor()

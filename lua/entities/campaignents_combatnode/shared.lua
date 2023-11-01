@@ -30,14 +30,14 @@ local function PosCanSee( startPos, endPos, filter, mask )
 
 end
 
-function ENT:SetupDataTables()
-    --self:NetworkVar( "Int",     0, "GoalID",    { KeyName = "goalid",   Edit = { type = "Int", min = -1, max = 1000, order = 1 } } )
+function ENT:SetupSessionVars()
+    self.nextFindNearby = 0
+    self.stuffNearby = 0
 
 end
 
 function ENT:Initialize()
     if SERVER then
-
         self:SetModel( self.DefaultModel )
         self:SetNoDraw( false )
         self:DrawShadow( false )
@@ -46,6 +46,7 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_WORLD )
         self:SetMaterial( "models/props_lab/xencrystal_sheet" )
 
+        self:SetupSessionVars()
         self:GetPhysicsObject():EnableMotion( false )
 
         timer.Simple( 0, function()
@@ -91,8 +92,12 @@ end
 if not SERVER then return end
 
 local myClass = "campaignents_combatnode"
-local shareFindResultsDist = 200^2
-local pathDistNoAiNodes = 500^2
+local shareFindResultsDist = 200
+local pathDistNoAiNodes = 500
+local findAllDist = pathDistNoAiNodes + shareFindResultsDist
+
+pathDistNoAiNodes = pathDistNoAiNodes^2
+shareFindResultsDist = shareFindResultsDist^2
 
 function ENT:Think()
     if not SERVER then return end
@@ -102,7 +107,7 @@ function ENT:Think()
     local stuffNearby = self.stuffNearby
     if not stuffNearby or nextFindNearby < CurTime() then
         self.nextFindNearby = CurTime() + math.Rand( 2, 4 )
-        stuffNearby = ents.FindInSphere( self:GetPos(), 700 )
+        stuffNearby = ents.FindInSphere( self:GetPos(), findAllDist )
         self.stuffNearby = stuffNearby
 
         -- save on FindInSpheres by sharing our results with neighbors
@@ -247,10 +252,13 @@ function ENT:ManageNPC( npc )
         local justChargeEm = ( potentialShotgun and nodeIsCloser )
         local advantagousPosition = justChargeEm or getCloseThenOrbit
 
+        local nodeCanSeeEnemysFeet = PosCanSee( nodePosFootHeight, npcsEnemy:GetPos() + footOffset, { enemy, self } )
+        local enemyCanSeeNodesFoot = PosCanSee( nodePosFootHeight, npcsEyePos, { enemy, self } )
+        local goodCover = not nodeCanSeeEnemysFeet and not enemyCanSeeNodesFoot
+
         if noAmmo or lowHealth then
-            local nodeCanSeeEnemysFeet = PosCanSee( nodePosFootHeight, npcsEnemy:GetPos() + footOffset, { enemy, self } )
             -- take cover!
-            if not nodeCanSeeEnemysFeet and nodeCanSeeEnemy then
+            if goodCover and nodeCanSeeEnemy then
                 -- stay in cover!
                 npc.campaignents_NextMoveWhenSeeing = CurTime() + 8
                 self:MakeNPCGotoUs( npc, rand2DOffset )
@@ -290,7 +298,7 @@ function ENT:ManageNPC( npc )
             -- orbit!
             else
                 -- going into cover
-                if not nodeCanSeeEnemysFeet and nodeCanSeeEnemy then
+                if goodCover and nodeCanSeeEnemy then
                     npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 4, 8 )
                     npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 8, 12 )
                     npc.campaignents_NextFallbackMove = CurTime() + 25

@@ -111,6 +111,14 @@ function ENT:BlockerSetup()
             end
         end
     end )
+    timer.Simple( 2, function()
+        for _, currPly in ipairs( player.GetAll() ) do
+            if currPly:Alive() then
+                self:SavePlyRespawnPos( currPly )
+
+            end
+        end
+    end )
     if self.duplicatedIn then return end
     if nextRespawnMessage > CurTime() then return end
 
@@ -185,7 +193,6 @@ end
 
 function ENT:SmartRespawnBail( ply )
     ply:SetPos( ply.respawnManagerBailPos )
-    print( ply )
 
 end
 
@@ -242,7 +249,7 @@ function ENT:PlyInitializeRespawn( ply )
     ply.respawnManagerNeedsStatsSet = true
 
     local timerName = "STRAW_ply_" .. tostring( ply:GetCreationID() ) .. "respawnmanager"
-    timer.Create( timerName, engine.TickInterval(), 0, function()
+    timer.Create( timerName, 0.05, 0, function()
         local exit = nil
         if not IsValid( self ) or not IsValid( ply ) then
             exit = true
@@ -263,13 +270,13 @@ function ENT:PlyInitializeRespawn( ply )
     end )
 end
 
-hook.Add( "PlayerDeath", "weapon_blocker_recordnotalive", function( ply )
+hook.Add( "PlayerDeath", "respawn_manager_recordnotalive", function( ply )
     if not ActiveRespawnManager() then return end
     ply.respawnManagerPlayerIsDead = true
 
 end )
 
-hook.Add( "PlayerSpawn", "weapon_blocker_plyrespawn", function( ply, _ )
+hook.Add( "PlayerSpawn", "respawn_manager_plyrespawn", function( ply, _ )
     timer.Simple( engine.TickInterval(), function()
         if not IsValid( ply ) then return end
         if not ply:Alive() then return end

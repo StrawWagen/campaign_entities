@@ -187,19 +187,23 @@ function ENT:SpawnThing()
     newThing.DoNotDuplicate = true
 
     local timeNeeded = 0
-    if nextSpawnCrabCanister > CurTime() then
-        timeNeeded = math.abs( nextSpawnCrabCanister - CurTime() )
+    if not self:GetStatic() then
 
-    end
+        if nextSpawnCrabCanister > CurTime() then
+            timeNeeded = math.abs( nextSpawnCrabCanister - CurTime() )
 
-    addedTime = math.Rand( 0.1, 0.5 )
-    if ( spawnedCount % 3 ) == 0 then
-        addedTime = addedTime * 6
+        end
+
+        addedTime = math.Rand( 0.1, 0.5 )
+        if ( spawnedCount % 3 ) == 0 then
+            addedTime = addedTime * 6
+
+        end
+        nextSpawnCrabCanister = math.max( CurTime(), nextSpawnCrabCanister ) + addedTime
 
     end
 
     spawnedCount = spawnedCount + 1
-    nextSpawnCrabCanister = math.max( CurTime(), nextSpawnCrabCanister ) + addedTime
 
     timer.Simple( timeNeeded, function()
         if not IsValid( newThing ) then return end
@@ -218,7 +222,18 @@ function ENT:SpawnThing()
 
         if not self:GetStatic() then
             self:LaunchSound()
+            timer.Simple( airTime + -1, function()
+                if not IsValid( self ) then return end
+                self:IncomingSound()
 
+            end )
+
+            timer.Simple( airTime + -2, function()
+                if not IsValid( self ) then return end
+                if not IsValid( newThing ) then return end
+                sound.EmitHint( SOUND_DANGER, self:GetPos(), 600, 4, newThing )
+
+            end )
         else -- override above if static
             timeToSpawn = 0
 
@@ -240,6 +255,16 @@ function ENT:LaunchSound()
     filterAllPlayers:AddAllPlayers()
     local launchSound = CreateSound( self, "HeadcrabCanister.LaunchSound", filterAllPlayers )
     launchSound:SetSoundLevel( 0 )
+    launchSound:ChangePitch( math.Rand( 98, 102 ) )
+    launchSound:Play()
+
+end
+
+function ENT:IncomingSound()
+    if not IsValid( self.campaignents_Thing ) then return end
+    filterAllPlayers:AddAllPlayers()
+    local launchSound = CreateSound( self, "HeadcrabCanister.IncomingSound", filterAllPlayers )
+    launchSound:SetSoundLevel( 100 )
     launchSound:ChangePitch( math.Rand( 98, 102 ) )
     launchSound:Play()
 

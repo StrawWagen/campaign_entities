@@ -16,8 +16,6 @@ ENT.Material = "phoenix_storms/smallwheel"
 
 function ENT:OnDuplicated()
     self.duplicatedIn = true
-    self.overriddenCommand = nil
-    self.defaultVariable = nil
 
 end
 
