@@ -100,7 +100,8 @@ end
 
 -- let bullets thru!
 local sent_contents = CONTENTS_GRATE
+local bit_band = bit.band
 function ENT:TestCollision( _, _, _, _, mask )
-    if bit.band( mask, sent_contents ) ~= 0 then return true end
+    if bit_band( mask, sent_contents ) ~= 0 then return true end
 
 end
