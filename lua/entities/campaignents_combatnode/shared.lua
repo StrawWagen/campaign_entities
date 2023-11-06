@@ -32,7 +32,7 @@ end
 
 function ENT:SetupSessionVars()
     self.nextFindNearby = 0
-    self.stuffNearby = 0
+    self.stuffNearby = nil
 
 end
 
@@ -49,11 +49,17 @@ function ENT:Initialize()
         self:SetupSessionVars()
         self:GetPhysicsObject():EnableMotion( false )
 
+        self:SetKeyValue( "fademindist", 3000 )
+        self:SetKeyValue( "fademaxdist", 3500 )
+
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
             self:SelfSetup()
 
         end )
+    else
+        self.ShouldDraw = nil
+
     end
 end
 
@@ -63,7 +69,7 @@ function ENT:SelfSetup()
     if nextMessage > CurTime() then return end
 
     if campaignents_EnabledAi() then
-        local MSG = "I give NPCS in combat, somewhere to move to, even if there's no AI nodes!"
+        local MSG = "I give NPCS in combat, somewhere to move to, even if there's no AI nodes!\nPlace me behind cover, in the open, npcs will use me with intent!"
         self:TryToPrintOwnerMessage( MSG )
         timer.Simple( 0, function()
             MSG = "Spawn a big plate, put it high up, and spam copies of me on it, to see a demo!\nThis will not appear when duped in."
@@ -78,6 +84,7 @@ end
 
 function ENT:OnDuplicated()
     self.duplicatedIn = true
+    self:SetupSessionVars()
 
 end
 
@@ -121,11 +128,12 @@ function ENT:Think()
     end
 
     local didSomething
-    local isFighting 
+    local isFighting
     local operatedOnNpc
 
     for _, currThing in ipairs( stuffNearby ) do
-        if IsValid( currThing ) and currThing:IsNPC() and currThing.SetSchedule and currThing.GetMoveVelocity and currThing:GetPos():DistToSqr( myPos ) < pathDistNoAiNodes then -- make sure its a normal npc that was constructed by someone who is sane.
+        -- make sure its a normal npc that was constructed by someone who is sane.
+        if IsValid( currThing ) and currThing:IsNPC() and currThing.SetSchedule and currThing.GetMoveVelocity and currThing:GetPos():DistToSqr( myPos ) < pathDistNoAiNodes then
             local result = self:ManageNPC( currThing )
             didSomething = didSomething or result
             isFighting = currThing.GetEnemy and IsValid( currThing:GetEnemy() )
@@ -133,6 +141,7 @@ function ENT:Think()
 
         end
     end
+    -- op tem is ation
     if not operatedOnNpc then
         self:NextThink( CurTime() + math.Rand( 6, 12 ) )
         return true
@@ -150,6 +159,25 @@ function ENT:Think()
     end
 end
 
+local lowHp = 40 -- metrocoooop
+local highHp = 70 -- elite soldierrrr
+local hpDiff = math.abs( lowHp - highHp )
+local lowHpsReactionTime = 10
+local highHpsReactionTime = 1
+local reactDiff = math.abs( lowHpsReactionTime - highHpsReactionTime )
+
+-- make the stronger npcs move around alot more, and the weaker npcs, move around less
+
+local function npcsReactionSpeed( npc )
+    npcsHpClamped = math.Clamp( npc:GetMaxHealth(), lowHp, highHp )
+    local reactionSpeedScalar = ( npcsHpClamped + -lowHp ) / hpDiff
+
+    local reactionSpeed = reactDiff * reactionSpeedScalar -- get the opposite reaction speed
+    reactionSpeed = math.abs( reactionSpeed - lowHpsReactionTime ) -- make opposite speed not opposite
+    return reactionSpeed
+
+end
+
 local busySpeed = 25^2
 local meleeCloseEnough = 500^2
 local tooCloseToNode = 45^2
@@ -161,6 +189,8 @@ function ENT:ManageNPC( npc )
     local busy = ( npc.campaignents_NextMove or 0 ) > CurTime()
     if busy then return end
     busy = npc:GetMoveVelocity():LengthSqr() > busySpeed and npc:GetPathTimeToGoal() > 0.5
+    if busy then return end
+    busy = npc.GetNPCState and npc:GetNPCState() == NPC_STATE_SCRIPT -- npc mannable emplacement patch
     if busy then return end
 
 
@@ -228,14 +258,18 @@ function ENT:ManageNPC( npc )
 
     local fallbackMove = ( npc.campaignents_NextFallbackMove or 0 ) < CurTime()
     local canWeaps = bit.band( theirCaps, CAP_USE_WEAPONS ) ~= 0
+    local activeWep
     local potentialShotgun
-    local equipped
+    local canRangedWep
+    local canMeleeWep
     if canWeaps then
-        equipped = IsValid( npc:GetActiveWeapon() )
+        activeWep = npc:GetActiveWeapon()
+        canRangedWep = IsValid( activeWep ) and ( bit.band( theirCaps, CAP_WEAPON_RANGE_ATTACK1 ) or bit.band( theirCaps, CAP_WEAPON_RANGE_ATTACK2 ) )
+        canMeleeWep = IsValid( activeWep ) and ( bit.band( theirCaps, CAP_WEAPON_MELEE_ATTACK1 ) or bit.band( theirCaps, CAP_WEAPON_MELEE_ATTACK2 ) )
 
     end
-    if equipped then
-        potentialShotgun = string.find( npc:GetActiveWeapon():GetClass(), "shotgun" )
+    if canRangedWep then
+        potentialShotgun = string.find( activeWep:GetClass(), "shotgun" )
 
     end
 
@@ -243,7 +277,8 @@ function ENT:ManageNPC( npc )
     local distToEnemySqr = npcsEyePos:DistToSqr( enemysEyePos )
     local nodeIsCloser = nodesPos:DistToSqr( enemysEyePos ) < distToEnemySqr
 
-    if canWeaps and equipped then
+    if canWeaps and canRangedWep then
+        local react = npcsReactionSpeed( npc )
         local lowHealth = self:Health() < ( self:GetMaxHealth() * 0.25 )
 
         -- either approach enemy or keep our distance!
@@ -260,7 +295,7 @@ function ENT:ManageNPC( npc )
             -- take cover!
             if goodCover and nodeCanSeeEnemy then
                 -- stay in cover!
-                npc.campaignents_NextMoveWhenSeeing = CurTime() + 8
+                npc.campaignents_NextMoveWhenSeeing = CurTime() + 4 + react
                 self:MakeNPCGotoUs( npc, rand2DOffset )
 
             -- it timed out! just go to non-ideal cover!
@@ -275,7 +310,7 @@ function ENT:ManageNPC( npc )
             local justHadLos = ( npc.campaignents_NextAcquireLos or 0 ) > CurTime()
             if nodeCanSeeEnemy and not justHadLos then
                 self:MakeNPCGotoUs( npc, rand2DOffset )
-                npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 4, 6 )
+                npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 2, 4 ) + react
                 npc.campaignents_NextFallbackMove = CurTime() + 20
 
             elseif nodeIsCloser and not justHadLos then
@@ -292,19 +327,19 @@ function ENT:ManageNPC( npc )
             self:MakeNPCGotoUs( npc, rand2DOffset )
             -- charge
             if potentialShotgun then
-                npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 2, 4 )
+                npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 1, 2 )
                 npc.campaignents_NextFallbackMove = CurTime() + 20
 
             -- orbit!
             else
                 -- going into cover
                 if goodCover and nodeCanSeeEnemy then
-                    npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 4, 8 )
+                    npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 2, 4 ) + react
                     npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 8, 12 )
                     npc.campaignents_NextFallbackMove = CurTime() + 25
 
                 else
-                    npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 2, 4 )
+                    npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 1, 2 ) + react
                     npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 6, 8 )
                     npc.campaignents_NextFallbackMove = CurTime() + 20
 
@@ -316,7 +351,7 @@ function ENT:ManageNPC( npc )
 
         end
     -- npc_citizen without weapons? maybe?
-    elseif canWeaps and not equipped then
+    elseif canWeaps and not canRangedWep and not canMeleeWep then
         if not nodeIsCloser then
             self:MakeNPCGotoUs( npc, rand2DOffset )
             npc.campaignents_NextMoveWhenSeeing = CurTime() + 2
@@ -327,7 +362,7 @@ function ENT:ManageNPC( npc )
 
         end
     -- zombie or antions!
-    elseif not canWeaps then
+    else
         -- allow default melee behaviour to do it's thing
         if distToEnemySqr < meleeCloseEnough and not npc:IsUnreachable( npcsEnemy ) then
 

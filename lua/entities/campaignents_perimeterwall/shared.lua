@@ -419,7 +419,7 @@ function ENT:Think()
 
             end
             for _, attached in ipairs( self.oldAttachedTo ) do
-                if not attached.takingAStep and attached:CanStep() and not self:IsConnectedToWall( attached, distCheck ) then
+                if IsValid( attached ) and not attached.takingAStep and attached:CanStep() and not self:IsConnectedToWall( attached, distCheck ) then
                     attached.takingAStep = true
                     attached.stepType = 2
                     attached:NextThink( CurTime() + math.Rand( 0.75, 1.5 ) )

@@ -18,7 +18,7 @@ function ENT:SetupDataTables()
         self:SetAlwaysOn( false )
 
         self:NetworkVarNotify( "AllowCombinePlys", function()
-            if not CLIENT then return end
+            if not SERVER then return end
             if not IsValid( self ) then return end
 
             self:ResetShouldCollideCache()

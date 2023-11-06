@@ -14,14 +14,6 @@ ENT.Editable    = true
 ENT.DefaultModel = "models/Items/item_item_crate.mdl"
 ENT.CanCopy = nil
 
-local ourClass = "supplies_respawner"
-
-local function hitAnythingButPlacers( ent )
-    if ent:GetClass() == ourClass then return false end
-    return true
-
-end
-
 function ENT:SetModelToSpawn()
 end
 function ENT:SetNPCWeapon()
@@ -33,6 +25,12 @@ function ENT:GetModelToSpawn()
 end
 function ENT:GetNPCWeapon()
     return ""
+
+end
+
+local function hitAnythingButPlacers( ent )
+    if ent.isCampaignEntsRespawner then return false end
+    return true
 
 end
 
@@ -70,7 +68,7 @@ end
 
 function ENT:SpawnFunction( spawner, tr )
     local SpawnPos = tr.HitPos + vector_up * 80
-    local ent = ents.Create( ourClass )
+    local ent = ents.Create( self.ClassName )
     ent:SetPos( SpawnPos )
 
     if IsValid( spawner ) and spawner.EyeAngles then

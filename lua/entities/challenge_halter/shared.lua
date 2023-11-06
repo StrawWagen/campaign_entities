@@ -157,6 +157,7 @@ end
 hook.Add( "PlayerNoClip", "challenge_noclip_halter", function( ply, desiredState )
     if not ply:GetNWBool( "challengeHalterBlockingNoclip" ) then return end
     if not campaignents_EnabledAi() then return end
+    if campaignents_IsFreeMode() then return end
     local exiting = desiredState == false
     if exiting then
         return true -- always allow

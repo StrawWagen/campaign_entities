@@ -16,6 +16,7 @@ ENT.Purpose     = "Spawns a new thing if the previous one is removed."
 ENT.Spawnable   = true
 ENT.AdminOnly   = true
 
+ENT.isCampaignEntsRespawner = true
 ENT.Editable    = true
 ENT.DefaultModel = "models/props_c17/oildrum001_explosive.mdl"
 ENT.Material = "models/shadertest/shader5"
@@ -38,10 +39,8 @@ local function EntIsLookingAtEnt( looker, lookedAt )
 
 end
 
-local ourClass = "thing_respawner"
-
 local function hitAnythingButPlacers( ent )
-    if ent:GetClass() == ourClass then return false end
+    if ent.isCampaignEntsRespawner then return false end
     return true
 
 end
@@ -185,11 +184,12 @@ end
 
 function ENT:SpawnFunction( spawner, tr )
     local SpawnPos = tr.HitPos + vector_up * 80
-    local ent = ents.Create( ourClass )
+    local ent = ents.Create( self.ClassName )
     ent:SetPos( SpawnPos )
 
-    if IsValid( spawner ) and spawner.EyeAngles then
-        local ang = spawner:EyeAngles()
+    if IsValid( spawner ) and spawner.GetAimVector then
+        local dir = -spawner:GetAimVector()
+        local ang = dir:Angle()
         local newAng = Angle( 0, ang.y, 0 )
         ent:SetAngles( newAng )
 
@@ -227,12 +227,17 @@ function ENT:Initialize()
         self:SetMaterial( self.Material )
         self:SetNoDraw( false )
         self:DrawShadow( false )
-        self:SetMoveType( MOVETYPE_VPHYSICS )
+
         self:PhysicsInit( SOLID_VPHYSICS )
+        self:SetMoveType( MOVETYPE_VPHYSICS )
         self:SetCollisionGroup( COLLISION_GROUP_WORLD ) -- npcs can see through?
 
-        self:GetPhysicsObject():EnableMotion( false )
+        -- let bullets pass
+        self:AddSolidFlags( FSOLID_CUSTOMRAYTEST )
+        self:SetCustomCollisionCheck( true )
+        self:EnableCustomCollisions( true )
 
+        self:GetPhysicsObject():EnableMotion( false )
         self:ResetVars()
 
         timer.Simple( 0, function()
@@ -251,6 +256,14 @@ function ENT:Initialize()
         campaignents_DoBeamColor( self )
 
     end
+end
+
+-- let bullets thru!
+local bit_band = bit.band
+local sent_contents = CONTENTS_GRATE
+function ENT:TestCollision( _, _, _, _, mask )
+    if bit_band( mask, sent_contents ) ~= 0 then return true end
+
 end
 
 function ENT:AdditionalInitialize()

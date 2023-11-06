@@ -146,7 +146,7 @@ function ENT:ManagePlysWeapons( ply )
     if not IsValid( ply ) then return end
     if not ply:Alive() then return end
     local inNoclip = ply:CampaignEnts_IsInNoclip()
-    local enabled = self.Enabled and not inNoclip
+    local enabled = self.Enabled and not inNoclip and not campaignents_IsFreeMode()
 
     if enabled == nil then enabled = false end
 

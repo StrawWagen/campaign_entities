@@ -118,9 +118,10 @@ function ENT:MandateThink()
         return
 
     end
+    if campaignents_IsFreeMode() then return end
     if not mandatorIsEnabled:GetBool() then return end
     if game.IsDedicated() and not enabledOnDediServers:GetBool() then
-        local MSG = "Command Mandator: Functionality is disabled on dedicated servers.\nChange" .. dediServersCmdName .. " to 1, to enable it."
+        local MSG = "Command Mandator: Functionality is disabled on dedicated servers.\nChange " .. dediServersCmdName .. " to 1, to enable it."
         self:TryToPrintOwnerMessage( MSG )
         return
 

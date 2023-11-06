@@ -52,6 +52,7 @@ ENT.ProxyPostSpawnFunc = function( _, toApply, _ )
 
 end
 
+-- only happens once, when it's spawned from spawnmenu
 function ENT:AdditionalInitialize( proxyEnt )
     proxyEnt:Spawn()
 

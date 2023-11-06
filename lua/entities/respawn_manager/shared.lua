@@ -192,6 +192,7 @@ function ENT:Think()
 end
 
 function ENT:SmartRespawnBail( ply )
+    ply:PrintMessage( HUD_PRINTTALK, "Seems like the Dynamic Respawner put you somewhere that got you stuck.\nBAILING!" )
     ply:SetPos( ply.respawnManagerBailPos )
 
 end

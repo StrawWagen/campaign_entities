@@ -71,12 +71,12 @@ function ENT:Initialize()
     self:SetNWEntity( "dummystart", self.startDummy )
 
     self:PhysicsInit( SOLID_VPHYSICS )
+    self:SetMoveType( MOVETYPE_VPHYSICS )
+    self:SetCollisionGroup( COLLISION_GROUP_NONE )
+
     self:AddSolidFlags( FSOLID_CUSTOMRAYTEST )
     self:SetCustomCollisionCheck( true )
     self:EnableCustomCollisions( true )
-
-    self:SetMoveType( MOVETYPE_VPHYSICS )
-    self:SetCollisionGroup( COLLISION_GROUP_NONE )
 
     self:DoShieldCollisions()
 
@@ -460,23 +460,44 @@ local combineClasses = {
 
 }
 
+local function plyShouldBeBlocked( ply, field )
+    local mdl = ply:GetModel()
+    if field:GetAllowCombinePlys() and isCombineModel( mdl ) then return false end
+    return true
+
+end
+
+-- returns two vars
+-- first, if it should collide, second, if the result should never be cached ( big optimisation ) 
 local function fieldShouldCollide( field, colliding )
     local collidingsClass = colliding:GetClass()
 
     -- !!!!!!!! return false, ent can pass through no problem, return TRUE and ent will be stopped by shield !!!!!!!!
     -- result is then CACHED by each shield!
     -- always double check after you impliment hooks that work with other peoples stuff!
-    local hookResult = hook.Run( "campaignents_field_shouldcollide", field, colliding, collidingsClass )
-    if hookResult then
-        return hookResult
+    local hookShouldCollide, hookBlockCaching = hook.Run( "campaignents_field_shouldcollide", field, colliding, collidingsClass )
+    if hookShouldCollide ~= nil then
+        return hookShouldCollide, hookBlockCaching
 
     elseif colliding:IsNPC() and not ( combineClasses[collidingsClass] or isCombineModel( colliding:GetModel() ) ) then
         return true
 
-    elseif colliding:IsPlayer() then
-        local mdl = colliding:GetModel()
-        if field:GetAllowCombinePlys() and isCombineModel( mdl ) then return false end
+    elseif colliding:IsPlayer() and plyShouldBeBlocked( colliding, field ) then
         return true
+
+    elseif colliding:IsVehicle() then
+        local mdl = colliding:GetModel()
+        local driver = colliding:GetDriver()
+        if isCombineModel( mdl ) then
+            return false
+
+        elseif IsValid( driver ) and not plyShouldBeBlocked( driver, field ) then
+            return false, true
+
+        else
+            return true, true
+
+        end
 
     end
     return false
@@ -520,7 +541,11 @@ hook.Add( "ShouldCollide", "campaignents_realistic_forcefield", function( entA, 
 
     end
 
-    shouldCollide = fieldShouldCollide( field, colliding, collidingsClass )
+    local blockCaching
+    shouldCollide, blockCaching = fieldShouldCollide( field, colliding, collidingsClass )
+
+    if blockCaching == true then return shouldCollide end
+
     field.fieldShouldCollideCache[ colliding:GetCreationID() ] = shouldCollide
 
     return shouldCollide
