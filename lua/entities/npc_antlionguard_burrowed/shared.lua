@@ -9,6 +9,7 @@ ENT.DebugModel = "models/maxofs2d/balloon_gman.mdl"
 ENT.DebugColor = Color( 0, 50, 0 )
 ENT.AmbushDist = 1000
 ENT.MyClass = "npc_antlionguard_burrowed"
+ENT.ModelToPrecache = "models/antlion_guard.mdl"
 ENT.AmbusherClass = "npc_antlionguard"
 ENT.HintSoundChance = 10
 

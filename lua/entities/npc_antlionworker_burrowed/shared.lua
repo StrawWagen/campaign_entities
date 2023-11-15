@@ -9,6 +9,7 @@ ENT.DebugModel = "models/maxofs2d/companion_doll.mdl"
 ENT.DebugColor = Color( 0, 255, 0 )
 ENT.AmbushDist = 512
 ENT.MyClass = "npc_antlionworker_burrowed"
+ENT.ModelToPrecache = "models/antlion_worker.mdl"
 ENT.AmbusherClass = "npc_antlion"
 
 function ENT:InitializeAmbusher()

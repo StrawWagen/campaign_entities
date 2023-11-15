@@ -9,6 +9,7 @@ ENT.DebugModel = "models/balloons/balloon_dog.mdl"
 ENT.DebugColor = Color( 50,0,0 )
 ENT.AmbushDist = 256
 ENT.MyClass = "npc_fastzombie_slump_a"
+ENT.ModelToPrecache = "models/Zombie/Fast.mdl"
 ENT.AmbusherClass = "npc_fastzombie"
 
 ENT.Slump = "slump_a"
@@ -136,6 +137,7 @@ function ENT:Ambush()
 end
 
 function ENT:DoHintSound()
+    if self:GetIsSilent() then return end
     local sounds = self.HintSounds
 
     local theSound = sounds[ math.random( 1, #sounds ) ]

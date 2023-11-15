@@ -37,6 +37,8 @@ function ENT:MakeALilSpark()
     effect:SetOrigin( self:WorldSpaceCenter() )
     effect:SetEntity( self )
     effect:SetMagnitude( 2 )
+    effect:SetScale( 2 )
+    effect:SetRadius( 2 )
 
     util.Effect( "ElectricSpark", effect, true, true )
 

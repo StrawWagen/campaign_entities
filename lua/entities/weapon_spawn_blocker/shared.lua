@@ -15,9 +15,11 @@ ENT.Model = "models/maxofs2d/cube_tool.mdl"
 ENT.Material = "phoenix_storms/cube"
 
 function ENT:SetupDataTables()
-    self:NetworkVar( "Bool",    0, "WeaponsPersistOnDeath",    { KeyName = "deathpersist",    Edit = { type = "Bool" } } )
+    self:NetworkVar( "Bool",    0, "WeaponsPersistOnDeath", { KeyName = "deathpersist",         Edit = { type = "Bool" } } )
+    self:NetworkVar( "Bool",    1, "JustStripWeapons",      { KeyName = "juststripweapons",    Edit = { type = "Bool" } } )
     if SERVER then
         self:SetWeaponsPersistOnDeath( true )
+        self:SetJustStripWeapons( false )
     end
 end
 
@@ -47,6 +49,14 @@ local STRAW_WeaponBlocker
 local function ActiveBlocker()
     if not IsValid( STRAW_WeaponBlocker ) then return end
     if not campaignents_EnabledAi() then return end
+    return true
+
+end
+
+local function BlockerStopsSpawning()
+    if not IsValid( STRAW_WeaponBlocker ) then return end
+    if STRAW_WeaponBlocker.GetJustStripWeapons and STRAW_WeaponBlocker:GetJustStripWeapons() then return end
+
     return true
 
 end
@@ -150,6 +160,23 @@ function ENT:ManagePlysWeapons( ply )
 
     if enabled == nil then enabled = false end
 
+    if self.GetJustStripWeapons and self:GetJustStripWeapons() then
+        if enabled == true and ply.campaignEnts_WeaponStripper ~= self then
+            if not ply.campaignEnts_OldLoadout then
+                self:StoreOldLoadout( ply )
+
+            end
+            ply.campaignEnts_WeaponStripper = self
+            ply:StripWeapons()
+
+        elseif enabled ~= true then
+            self:RestoreOldLoadout( ply )
+
+        end
+        return
+
+    end
+
     local plysWeapStatus = ply.campaignEnts_WeapBlockerEnabled
     if enabled ~= plysWeapStatus then
         ply.campaignEnts_WeapBlockerHandling = true -- HACK
@@ -211,6 +238,7 @@ end
 
 local function swepGiveThink( ply, _, _ )
     if not ActiveBlocker() then return nil end
+    if not BlockerStopsSpawning() then return nil end
     if ( ply.nextDenySound or 0 ) > CurTime() then return false end
     ply.nextDenySound = CurTime() + engine.TickInterval()
     -- AAAAAAAAAA
@@ -225,6 +253,7 @@ hook.Add( "PlayerSpawnSWEP", "weapon_blocker_spawnswep", swepGiveThink )
 
 hook.Add( "PlayerDeath", "weapon_blocker_plydeath", function( ply )
     if not ActiveBlocker() then return end
+    if not BlockerStopsSpawning() then return end
     ply.campaignEnts_WeapBlockerEnabled = nil
     ply.campaignEnts_WeapBlockerHandlingRespawn = true
 
@@ -232,6 +261,7 @@ end )
 
 hook.Add( "PlayerSpawn", "weapon_blocker_plyrespawn", function( ply, _ )
     if not ActiveBlocker() then return end
+    if not BlockerStopsSpawning() then return end
     ply.campaignEnts_NeedsLoadoutRefresh = true
     timer.Simple( 0.1, function()
         if not IsValid( ply ) then return end
@@ -245,6 +275,7 @@ end )
 
 hook.Add( "PlayerCanPickupWeapon", "weapon_blocker_validpickupweapon", function( ply, weap )
     if not ActiveBlocker() then return end
+    if not BlockerStopsSpawning() then return end
 
     if ply.campaignEnts_WeapBlockerHandling then return end -- within ManagePlysWeapons
     if ply.campaignEnts_WeapBlockerHandlingRespawn then return end

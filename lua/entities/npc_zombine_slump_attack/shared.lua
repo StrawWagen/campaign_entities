@@ -10,6 +10,7 @@ ENT.DebugModel = "models/maxofs2d/balloon_mossman.mdl"
 ENT.DebugColor = Color( 150,150,0 )
 ENT.AmbushDist = 64
 ENT.MyClass = "npc_zombine_slump_attack"
+ENT.ModelToPrecache = "models/zombie/zombie_soldier.mdl"
 ENT.AmbusherClass = "npc_zombine"
 
 ENT.Slump = "slump_a"

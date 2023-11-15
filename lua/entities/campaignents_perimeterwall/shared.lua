@@ -75,7 +75,7 @@ end
 
 if not SERVER then return end
 
--- positions left/right of walls
+-- positions left/right of walls, used to determine if a wall is "connected" to another wall
 local connectionOffsets = {
     Vector( 0, 80, 0 ),
     Vector( 0, -80, 0 ),
@@ -384,6 +384,7 @@ function ENT:Think()
         local fraction = ( newStep % 1 )
         self.oldFraction = fraction
 
+        -- start moving!
         if fraction >= 0.01 and oldFraction <= 0.01 then
             self.oldAttachedTo = {}
             local _, _, _, potentiallyAttached = self:GetBestToAttachTo()
@@ -407,17 +408,20 @@ function ENT:Think()
             end
         end
 
+        -- getting ready to drop!
         if fraction >= 0.35 and oldFraction <= 0.35 and stepType == 1 then
             self:EmitSound( "ambient/machines/wall_move2.wav", 90, 95, 1, CHAN_STATIC )
 
         end
 
+        -- all done!
         if fraction >= 0.99 and oldFraction <= 0.99 then
             local distCheck = tooFarHalf
             if stepType == 2 then
                 distCheck = tooFar
 
             end
+            -- tell my buddies to slide forward!
             for _, attached in ipairs( self.oldAttachedTo ) do
                 if IsValid( attached ) and not attached.takingAStep and attached:CanStep() and not self:IsConnectedToWall( attached, distCheck ) then
                     attached.takingAStep = true
@@ -513,7 +517,9 @@ function ENT:WallSlideStart()
 
 end
 
+-- deal damage and push objects!
 function ENT:WallSlide()
+    sound.EmitHint( SOUND_THUMPER, self:LocalToWorld( wallAlmostBottom ), 1500, 8, self )
 
     local splode = ents.Create( "env_explosion" )
     splode:SetOwner( self )
@@ -567,8 +573,9 @@ function ENT:WallSlide()
 
 end
 
+-- deal damage, push stuff, and play SFX! 
 function ENT:WallLand()
-    sound.EmitHint( SOUND_THUMPER, self:LocalToWorld( wallAlmostBottom ), 1800, 10, self )
+    sound.EmitHint( SOUND_THUMPER, self:LocalToWorld( wallAlmostBottom ), 1800, 8, self )
 
     util.ScreenShake( self:GetPos(), 80, 15, 5, 2000, true )
     util.ScreenShake( self:GetPos(), 3, 20, 10, 4000, true )
@@ -642,6 +649,7 @@ end
 
 local minDist = 350^2
 
+-- get another wall thats close to us!
 function ENT:GetBestToAttachTo()
     local myPos = self:GetPos()
     local closest
@@ -670,6 +678,7 @@ function ENT:GetBestToAttachTo()
     end
 end
 
+-- is this other wall "connected" ?
 function ENT:IsConnectedToWall( ent, distNeeded )
     local myPos = self:GetPos()
     local attachments = {}

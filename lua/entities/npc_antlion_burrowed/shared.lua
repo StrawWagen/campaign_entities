@@ -27,6 +27,7 @@ ENT.DebugModel = "models/balloons/balloon_dog.mdl"
 ENT.DebugColor = Color( 0, 255, 0 )
 ENT.AmbushDist = 384 --128 * 3
 ENT.MyClass = "npc_antlion_burrowed"
+ENT.ModelToPrecache = "models/AntLion.mdl"
 ENT.AmbusherClass = "npc_antlion"
 ENT.HintSoundChance = 3
 
@@ -52,8 +53,8 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Int",    1, "TeammateWakeDist",           { KeyName = "teammatewakedist",         Edit = { order = 2, type = "Int", min = -1, max = 1000 } } )
     self:NetworkVar( "Float",  0, "WakeDelay",                  { KeyName = "wakeDelay",                Edit = { order = 3, type = "Float", min = 0, max = 30 } } )
     self:NetworkVar( "Bool",   0, "WakeNearTeammates",          { KeyName = "wakenearteammates",        Edit = { order = 4, type = "Bool" } } )
-    self:NetworkVar( "Bool",   1, "CanChainWakeTeammates",      { KeyName = "canchainwaketeammates",    Edit = { order = 4, type = "Bool" } } )
-    self:NetworkVar( "Bool",   2, "IsSilent",                   { KeyName = "issilent",                 Edit = { order = 5, type = "Bool" } } )
+    self:NetworkVar( "Bool",   1, "CanChainWakeTeammates",      { KeyName = "canchainwaketeammates",    Edit = { order = 5, type = "Bool" } } )
+    self:NetworkVar( "Bool",   2, "IsSilent",                   { KeyName = "issilent",                 Edit = { order = 6, type = "Bool" } } )
     self:NetworkVar( "Bool",   3, "ForceWake",                  { KeyName = "forcewake",                Edit = { readonly = true } } )
 
     self:SetAmbushDistance( self.AmbushDist )
@@ -115,6 +116,11 @@ function ENT:Initialize()
     self:SetModel( self.DebugModel )
     self:SetColor( self.DebugColor )
     self:DrawShadow( false )
+
+    if self.ModelToPrecache then
+        util.PrecacheModel( self.ModelToPrecache )
+
+    end
 
     if campaignents_EnabledAi() then
         self:CreateAmbusher()

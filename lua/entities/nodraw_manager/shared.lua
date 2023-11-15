@@ -179,7 +179,11 @@ local function RecursiveSetPreventTransmit( Thing, Player, StopTransmitting )
     if Player == Thing then return end
     if recursivePreventExtent > 500 then return end
     recursivePreventExtent = recursivePreventExtent + 1
-    Thing:SetPreventTransmit( Player, StopTransmitting )
+
+    if not Thing.UpdateTransmitState or Thing:UpdateTransmitState() ~= TRANSMIT_ALWAYS then
+        Thing:SetPreventTransmit( Player, StopTransmitting )
+
+    end
 
     if not isfunction( Thing.GetChildren ) then return end
     local Children = Thing:GetChildren()

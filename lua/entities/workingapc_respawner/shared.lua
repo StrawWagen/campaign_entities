@@ -66,7 +66,7 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    6, "CanDrive",          { KeyName = "candrive",             Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
     self:NetworkVar( "Bool",    7, "Static",              { KeyName = "static",                 Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
     self:NetworkVar( "Int",     10, "PoliceCount",      { KeyName = "copcount",             Edit = { order = 13, type = "Int", min = 0, max = 10, category = "Combine APC" } } )
-    self:NetworkVar( "Int",     11, "APCHealth",        { KeyName = "apchealth",            Edit = { order = 14, type = "Int", min = 750, max = 3000, category = "Combine APC" } } )
+    self:NetworkVar( "Int",     11, "APCHealth",        { KeyName = "apchealth",            Edit = { order = 14, type = "Int", min = 500, max = 3000, category = "Combine APC" } } )
     self:NetworkVar( "Float",   0, "APCDamageMul",      { KeyName = "apcdamagemul",         Edit = { order = 14, type = "float", min = 0.5, max = 3, category = "Combine APC" } } )
 
     if SERVER then
@@ -147,6 +147,18 @@ end
 
 local nextRespawnerMessage = 0
 function ENT:SelfSetup()
+
+    if not self:GetStatic() then
+        if self:GetPoliceCount() > 0 then
+            util.PrecacheModel( "models/Police.mdl" )
+
+        end
+        if self:GetDoManhacks() then
+            util.PrecacheModel( "models/manhack.mdl" )
+
+        end
+    end
+
     if self.duplicatedIn then return end
     if nextRespawnerMessage > CurTime() then return end
     if campaignents_EnabledAi() then

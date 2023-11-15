@@ -9,6 +9,7 @@ ENT.DebugModel = "models/headcrabclassic.mdl"
 ENT.DebugColor = Color( 100, 100, 0 )
 ENT.AmbushDist = 256
 ENT.MyClass = "npc_headcrab_burrowed"
+ENT.ModelToPrecache = "models/headcrabclassic.mdl"
 ENT.AmbusherClass = "npc_headcrab"
 
 ENT.HintSoundChance = 8
