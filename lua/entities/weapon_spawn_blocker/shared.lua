@@ -239,6 +239,7 @@ end
 local function swepGiveThink( ply, _, _ )
     if not ActiveBlocker() then return nil end
     if not BlockerStopsSpawning() then return nil end
+    if ply:CampaignEnts_IsInNoclip() then return nil end
     if ( ply.nextDenySound or 0 ) > CurTime() then return false end
     ply.nextDenySound = CurTime() + engine.TickInterval()
     -- AAAAAAAAAA
@@ -276,6 +277,7 @@ end )
 hook.Add( "PlayerCanPickupWeapon", "weapon_blocker_validpickupweapon", function( ply, weap )
     if not ActiveBlocker() then return end
     if not BlockerStopsSpawning() then return end
+    if not IsValid( ply ) then return end
 
     if ply.campaignEnts_WeapBlockerHandling then return end -- within ManagePlysWeapons
     if ply.campaignEnts_WeapBlockerHandlingRespawn then return end

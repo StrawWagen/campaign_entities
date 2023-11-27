@@ -15,15 +15,20 @@ ENT.Editable = true
 ENT.Model = "models/maxofs2d/cube_tool.mdl"
 
 function ENT:SetupDataTables()
-    self:NetworkVar( "Int", 0,  "Intensity",      { KeyName = "intensity",        Edit = { type = "Int", order = 1, min = 0, max = 3, } } )
-    self:NetworkVar( "Float", 0,  "Responsiveness", { KeyName = "responsiveness",   Edit = { type = "Float", order = 2, min = 0.1, max = 1, } } )
+    self:NetworkVar( "Int", 0,      "Intensity",        { KeyName = "intensity",        Edit = { type = "Int", order = 1, min = 0, max = 3, } } )
+    self:NetworkVar( "Float", 0,    "Responsiveness",   { KeyName = "responsiveness",   Edit = { type = "Float", order = 2, min = 0.1, max = 1, } } )
+
+    self:NetworkVar( "Bool", 0,     "LongDistFx",       { KeyName = "longdistfx",       Edit = { type = "Bool", order = 3, title = "Laggy, background rain?" } } )
 
     if SERVER then
         self:SetIntensity( 1 )
         self:SetResponsiveness( 0.2 )
+        self:SetLongDistFx( true )
 
     end
 end
+
+local campaignents_RainSpawner = nil
 
 function ENT:BestowerSetup()
     self:AddEFlags( EFL_FORCE_CHECK_TRANSMIT )
@@ -55,6 +60,7 @@ end
 local nextTinterMessage = 0
 
 function ENT:SelfSetup()
+    campaignents_RainSpawner = self
     if self.duplicatedIn then return end
     if nextTinterMessage > CurTime() then return end
     if campaignents_EnabledAi() then
@@ -224,6 +230,10 @@ function ENT:OnRemove()
 end
 
 function ENT:Think()
+    if not campaignents_RainSpawner or campaignents_RainSpawner ~= self then
+        campaignents_RainSpawner = self
+
+    end
     local myIntensity = self:GetIntensity()
     if not campaignEnts_rainIntensity or campaignEnts_rainIntensity ~= myIntensity then
         campaignEnts_rainIntensity = math.Approach( campaignEnts_rainIntensity, myIntensity, self:GetResponsiveness() / 500 )
@@ -253,6 +263,8 @@ end
 hook.Add( "Think", "campaignents_rain_farrain", function()
     if campaignEnts_rainIntensity <= 0 then return end
     if nextFarRain > CurTime() then return end
+    if not IsValid( campaignents_RainSpawner ) then return end
+    if not campaignents_RainSpawner:GetLongDistFx() then return end
 
     local divisor = math.max( 1.5, campaignEnts_rainIntensity )
     nextFarRain = CurTime() + ( math.Rand( 0.75, 0.95 ) / divisor )

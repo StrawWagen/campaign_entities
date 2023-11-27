@@ -140,7 +140,6 @@ function ENT:SetupDataTables()
 
     end
 
-
     self:NetworkVarNotify( "ClassToSpawn", function()
         if not SERVER then return end
         if not IsValid( self ) then return end
@@ -183,7 +182,7 @@ function ENT:SetupDataTables()
 end
 
 function ENT:SpawnFunction( spawner, tr )
-    local SpawnPos = tr.HitPos + vector_up * 80
+    local SpawnPos = tr.HitPos + vector_up * 120
     local ent = ents.Create( self.ClassName )
     ent:SetPos( SpawnPos )
 
@@ -228,13 +227,19 @@ function ENT:Initialize()
         self:DrawShadow( false )
 
         self:PhysicsInit( SOLID_VPHYSICS )
-        self:SetMoveType( MOVETYPE_VPHYSICS )
+        self:SetMoveType( MOVETYPE_FLY )
+        self:SetCollisionGroup( COLLISION_GROUP_WORLD )
 
-        if IsValid( self:GetPhysicsObject() ) then
-            self:GetPhysicsObject():EnableCollisions( false )
-            self:GetPhysicsObject():EnableMotion( false )
+        self:SetCustomCollisionCheck( true )
+
+        local obj = self:GetPhysicsObject()
+
+        if IsValid( obj ) then
+            obj:Sleep()
+            obj:EnableMotion( false )
 
         end
+
         self:ResetVars()
 
         timer.Simple( 0, function()
@@ -254,6 +259,14 @@ function ENT:Initialize()
 
     end
 end
+
+hook.Add( "ShouldCollide", "campaignents_respawnersdontcollide", function( ent1, ent2 )
+    if ent1.isCampaignEntsRespawner or ent2.isCampaignEntsRespawner then
+        if ent2:IsPlayer() then return end -- physgunning it!
+        return false
+
+    end
+end )
 
 function ENT:AdditionalInitialize()
 end
@@ -707,11 +720,9 @@ end
 function ENT:AdditionalSpawnStuff( spawned )
     local class = spawned:GetClass()
 
-    if class == "npc_combine_s" then
-        if math.random( 1, 100 ) > 50 then
-            spawned:SetKeyValue( "NumGrenades", 2 )
+    if class == "npc_combine_s" and math.random( 1, 100 ) > 50 then
+        spawned:SetKeyValue( "NumGrenades", 2 )
 
-        end
     end
 end
 

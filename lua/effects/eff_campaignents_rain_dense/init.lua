@@ -33,7 +33,7 @@ function EFFECT:Init( data )
 
         done = done + 1
 
-        local itsDist = math_random( 2000 / scale, 8000 / scale )
+        local itsDist = math_random( 3000 / scale, 8500 / scale )
 
         local upComp = up * ( upDist + -500 )
         local randomComp = VectorRand() * flatten
@@ -85,7 +85,7 @@ function EFFECT:Init( data )
 
         local rollparticle = emitter:Add( particleTex, particlePos )
 
-        local vel = ( dropDir * math_random( 900, 1300 ) * scale * speedScale )
+        local vel = ( dropDir * math_random( 1000, 1400 ) * scale * speedScale )
         vel = vel + ( VectorRand() * 10 )
 
         rollparticle:SetVelocity( vel )
@@ -100,7 +100,6 @@ function EFFECT:Init( data )
         rollparticle:SetCollide( true )
         rollparticle:SetCollideCallback( function( part, _, _ )
             part:SetDieTime( 0 )
-            part:SetCollide( false )
 
         end )
 

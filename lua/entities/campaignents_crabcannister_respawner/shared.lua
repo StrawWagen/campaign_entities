@@ -224,6 +224,7 @@ function ENT:SpawnThing()
             self:LaunchSound()
             timer.Simple( airTime + -1, function()
                 if not IsValid( self ) then return end
+                if game.SinglePlayer() then return end -- this only doesnt play in multiplayer
                 self:IncomingSound()
 
             end )
@@ -231,7 +232,8 @@ function ENT:SpawnThing()
             timer.Simple( airTime + -2, function()
                 if not IsValid( self ) then return end
                 if not IsValid( newThing ) then return end
-                sound.EmitHint( SOUND_DANGER, self:GetPos(), 600, 4, newThing )
+                local landingTr = self:CannisterLandingTr( newThing )
+                sound.EmitHint( SOUND_DANGER, landingTr.HitPos, 600, 4, newThing )
 
             end )
         else -- override above if static
@@ -263,19 +265,25 @@ end
 function ENT:IncomingSound()
     if not IsValid( self.campaignents_Thing ) then return end
     filterAllPlayers:AddAllPlayers()
-    local launchSound = CreateSound( self, "HeadcrabCanister.IncomingSound", filterAllPlayers )
-    launchSound:SetSoundLevel( 100 )
+    local launchSound = CreateSound( self.campaignents_Thing, "HeadcrabCanister.IncomingSound", filterAllPlayers )
+    launchSound:SetSoundLevel( 120 )
     launchSound:ChangePitch( math.Rand( 98, 102 ) )
     launchSound:Play()
 
 end
 
-function ENT:SetupCannister( canister )
-
+function ENT:CannisterLandingTr( canister )
     local cannisterFloorStart = self:GetPos()
     local cannisterFloorEnd = self:GetPos() + -vector_up * 1500
     local _, flooringTr = PosCanSee( cannisterFloorStart, cannisterFloorEnd, { self, canister }, MASK_SOLID_BRUSHONLY )
-    canister:SetPos( flooringTr.HitPos )
+
+    return flooringTr
+
+end
+
+function ENT:SetupCannister( canister )
+    local landingTr = self:CannisterLandingTr( canister )
+    canister:SetPos( landingTr.HitPos )
     local ang = self:GetAngles()
     canister:SetAngles( ang )
 

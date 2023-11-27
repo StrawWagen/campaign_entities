@@ -10,12 +10,19 @@ ENT.PhysgunDisabled = true
 
 function ENT:SetupDataTables()
     -- for servers or something idk, good luck editing this without lua
+    -- above comment is wrong, you can just edit it when the shield is on 
     self:NetworkVar( "Bool", 0, "AllowCombinePlys", { KeyName = "allowcombineplys", Edit = { type = "Bool", order = 1 } } )
     self:NetworkVar( "Bool", 1, "AlwaysOn",         { KeyName = "alwayson",         Edit = { type = "Bool", order = 2 } } )
+
+    self:NetworkVar( "Entity", 0, "DummyStart" )
+    self:NetworkVar( "Entity", 1, "DummyEnd" )
 
     if SERVER then
         self:SetAllowCombinePlys( false )
         self:SetAlwaysOn( false )
+
+        self:SetDummyEnd( nil )
+        self:SetDummyStart( nil )
 
         self:NetworkVarNotify( "AllowCombinePlys", function()
             if not SERVER then return end
@@ -33,7 +40,7 @@ if CLIENT then
 end
 
 function ENT:DoShieldCollisions()
-    local dummyEnd = self:GetNWEntity( "dummyend" )
+    local dummyEnd = self:GetDummyEnd()
 
     if not IsValid( dummyEnd ) then return end
 

@@ -68,7 +68,7 @@ function ENT:Initialize()
 
     self.startDummy:SetOwner( self )
     self:DeleteOnRemove( self.startDummy )
-    self:SetNWEntity( "dummystart", self.startDummy )
+    self:SetDummyStart( self.startDummy )
 
     self:PhysicsInit( SOLID_VPHYSICS )
     self:SetMoveType( MOVETYPE_VPHYSICS )
@@ -123,7 +123,7 @@ function ENT:Initialize()
 
         self.endDummy:SetOwner( self )
         self:DeleteOnRemove( self.endDummy )
-        self:SetNWEntity( "dummyend", self.endDummy )
+        self:SetDummyEnd( self.endDummy )
 
         local endsPhysObj = self.endDummy:GetPhysicsObject()
 
@@ -205,8 +205,8 @@ function ENT:PreEntityCopy()
 end
 
 function ENT:PositionsThink()
-    local dummyStart = self:GetNWEntity( "dummystart" )
-    local dummyEnd = self:GetNWEntity( "dummyend" )
+    local dummyStart = self:GetDummyStart()
+    local dummyEnd = self:GetDummyEnd()
     if not IsValid( dummyStart ) then return end
     if not IsValid( dummyEnd ) then return end
 
@@ -294,7 +294,8 @@ function ENT:Think()
 
     if math.abs( self:GetCreationTime() - CurTime() ) < 0.25 then return end
 
-    local dummyEnd = self:GetNWEntity( "dummyend" )
+    local dummyEnd = self:GetDummyEnd()
+
     -- fix it not playing sometimes
     local redoTheShieldSound = self.redoTheShieldSound < CurTime()
 
@@ -355,8 +356,8 @@ end
 function ENT:TryToDissolve( entity )
     if self.doDissolveTime < CurTime() then return end
 
-    local dummyStart = self:GetNWEntity( "dummystart" )
-    local dummyEnd = self:GetNWEntity( "dummyend" )
+    local dummyStart = self:GetDummyStart()
+    local dummyEnd = self:GetDummyEnd()
 
     if ( entity == dummyStart ) or ( entity == dummyEnd ) then return end
 
@@ -591,8 +592,8 @@ local dissolveMins = -dissolveMaxs
 
 -- big munch!
 function ENT:TryToDissolveWithTraces()
-    local dummyStart = self:GetNWEntity( "dummystart" )
-    local dummyEnd = self:GetNWEntity( "dummyend" )
+    local dummyStart = self:GetDummyStart()
+    local dummyEnd = self:GetDummyEnd()
     local dummyStartPos = dummyStart:GetPos()
     local dummyEndPos = dummyEnd:GetPos()
     local dummyStartUp = dummyStart:GetUp()

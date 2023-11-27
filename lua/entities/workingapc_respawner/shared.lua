@@ -64,7 +64,7 @@ function ENT:SetupDataTables()
 
     self:NetworkVar( "Bool",    5, "DoManhacks",        { KeyName = "domanhacks",           Edit = { order = 11, type = "Bool", category = "Combine APC" } } )
     self:NetworkVar( "Bool",    6, "CanDrive",          { KeyName = "candrive",             Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
-    self:NetworkVar( "Bool",    7, "Static",              { KeyName = "static",                 Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
+    self:NetworkVar( "Bool",    7, "Static",            { KeyName = "static",               Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
     self:NetworkVar( "Int",     10, "PoliceCount",      { KeyName = "copcount",             Edit = { order = 13, type = "Int", min = 0, max = 10, category = "Combine APC" } } )
     self:NetworkVar( "Int",     11, "APCHealth",        { KeyName = "apchealth",            Edit = { order = 14, type = "Int", min = 500, max = 3000, category = "Combine APC" } } )
     self:NetworkVar( "Float",   0, "APCDamageMul",      { KeyName = "apcdamagemul",         Edit = { order = 14, type = "float", min = 0.5, max = 3, category = "Combine APC" } } )
@@ -93,7 +93,7 @@ function ENT:SetupDataTables()
 
     end
 
-    self:NetworkVarNotify( "GoalID", function( _, _, _, new )
+    self:NetworkVarNotify( "GoalID", function( _, _, _, _ )
         if not CLIENT then return end
         if not IsValid( self ) then return end
 
@@ -352,11 +352,11 @@ function ENT:SetupAPC( apc )
                 newTask = "missilespam"
                 apc:EmitSound( "ambient/alarms/apc_alarm_loop1.wav", 90 )
 
-            elseif ( timeSinceChange > 20 and distToEnemySqr < 3000^2 and distToEnemySqr > 1000^2 ) or ( reallyNotMoving and timeSinceChange > 10 ) or ( reallyNotMoving and timeSinceChange > 2 and distToEnemySqr < 350^2 ) then
+            elseif apc.doManhacks and ( ( timeSinceChange > 20 and distToEnemySqr < 3000^2 and distToEnemySqr > 1000^2 ) or ( reallyNotMoving and timeSinceChange > 10 ) or ( reallyNotMoving and timeSinceChange > 2 and distToEnemySqr < 350^2 ) ) then
                 newTask = "manhacks"
                 apc:EmitSound( "ambient/alarms/apc_alarm_loop1.wav", 90 )
 
-            elseif ( ( not moving and distToEnemySqr < 750^2 and timeSinceChange > 15 ) or ( reallyNotMoving and timeSinceChange > 5 ) ) and apc.policeLeft > 0 then
+            elseif apc.policeLeft > 0 and ( ( not moving and distToEnemySqr < 750^2 and timeSinceChange > 15 ) or ( reallyNotMoving and timeSinceChange > 5 ) ) then
                 newTask = "police"
                 apc:EmitSound( "ambient/alarms/apc_alarm_loop1.wav", 90 )
 
