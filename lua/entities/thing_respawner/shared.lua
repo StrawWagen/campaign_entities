@@ -20,7 +20,7 @@ ENT.isCampaignEntsRespawner = true
 ENT.Editable    = true
 ENT.DefaultModel = "models/props_c17/oildrum001_explosive.mdl"
 ENT.Material = "models/shadertest/shader5"
-ENT.CanCopy = true -- can copy the data of stuff, just blocks a print
+ENT.CanCopy = true -- can copy the data of stuff
 
 ENT.entsToWaitFor = {}
 
@@ -501,7 +501,7 @@ function ENT:Think()
     if not SERVER then return end
     local enabledAi = campaignents_EnabledAi()
 
-    if self.CanCopy and self:IsPlayerHolding() then
+    if self.CanCopy and self:IsPhysgunPickedUp() then
         if not printedMessage then
             printedMessage = true
             self:TryToPrintOwnerMessage( "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
@@ -742,3 +742,30 @@ function ENT:TryToPrintOwnerMessage( MSG )
 
     end
 end
+
+function ENT:IsPhysgunPickedUp()
+    local pickerUpper = self.campaignents_PickerUpper
+    if not IsValid( pickerUpper ) then return end
+    if not pickerUpper:KeyDown( IN_ATTACK ) then return end
+
+    local actWep = pickerUpper:GetActiveWeapon()
+    if not IsValid( actWep ) then return end
+    if actWep:GetClass() ~= "weapon_physgun" then return end
+
+    return true
+
+end
+
+hook.Add( "PhysgunPickup", "campaignents_respawner_pickedup", function( picker, picked ) 
+    if not picked.isCampaignEntsRespawner then return end
+
+    picked.campaignents_PickerUpper = picker
+
+end )
+
+hook.Add( "PhysgunDrop", "campaignents_respawner_dropped", function( dropper, dropped )
+    if not dropped.isCampaignEntsRespawner then return end
+
+    dropped.campaignents_PickerUpper = nil
+
+end )
