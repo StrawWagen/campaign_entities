@@ -275,17 +275,21 @@ function ENT:TriggerInput( iname, value )
     if iname == "On" then
         if value >= 1 then
             self:SetOn( true )
+            self:NextThink( CurTime() + 0.01 )
 
         else
             self:SetOn( false )
+            self:NextThink( CurTime() + 0.01 )
 
         end
     elseif iname == "ForceSpawn" then
         if value >= 1 then
             self:SetForceSpawn( true )
+            self:NextThink( CurTime() + 0.01 )
 
         else
             self:SetForceSpawn( false )
+            self:NextThink( CurTime() + 0.01 )
 
         end
     end
