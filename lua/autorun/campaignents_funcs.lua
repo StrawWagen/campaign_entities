@@ -43,3 +43,9 @@ function meta:CampaignEnts_IsInNoclip()
     return true
 
 end
+
+function campaignents_doFadeDistance( ent, dist )
+    ent:SetKeyValue( "fademindist", dist )
+    ent:SetKeyValue( "fademaxdist", dist + ( dist / 10 ) )
+
+end

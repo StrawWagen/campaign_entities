@@ -58,6 +58,8 @@ function ENT:Initialize()
 
     self:DrawShadow( false )
 
+    campaignents_doFadeDistance( self, 4000 )
+
     self.startDummy = ents.Create( "prop_physics" )
     self.startDummy:SetModel( "models/props_combine/combine_fence01b.mdl" )
     self.startDummy:SetPos( self:GetPos() )

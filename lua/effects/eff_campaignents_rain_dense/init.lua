@@ -44,7 +44,8 @@ function EFFECT:Init( data )
         local particlePos = vOffset + particleOffset
 
         local contents = util.PointContents( particlePos )
-        if bit.bor( contents, CONTENTS_SOLID ) ~= 1 then continue end
+        if bit.band( contents, CONTENTS_SOLID ) ~= 0 then continue end
+
 
         if not darkness then
             darkness = math.Clamp( render.GetLightColor( particlePos ):Length() + 0.30, 0.25, 0.75 )

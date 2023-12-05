@@ -46,6 +46,8 @@ end
 function ENT:Initialize()
     if SERVER then
         self:SetModel( self.DefaultModel )
+        campaignents_doFadeDistance( self, 3500 )
+
         self:SetNoDraw( false )
         self:DrawShadow( false )
         self:SetMoveType( MOVETYPE_VPHYSICS )

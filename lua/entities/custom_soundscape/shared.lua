@@ -186,6 +186,8 @@ end
 function ENT:Initialize()
     if SERVER then
         self:SetModel( self.Model )
+        campaignents_doFadeDistance( self, 5000 )
+
         self:SetMaterial( self.Material )
         self:SetNoDraw( false )
         self:DrawShadow( false )

@@ -64,6 +64,7 @@ function ENT:Initialize()
         self:PhysicsInit( SOLID_VPHYSICS )
         self:SetCollisionGroup( COLLISION_GROUP_DEBRIS_TRIGGER )
         self:SetMaterial( "phoenix_storms/bluemetal" )
+        campaignents_doFadeDistance( self, 3000 )
 
         self:GetPhysicsObject():EnableMotion( false )
 

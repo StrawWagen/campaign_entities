@@ -49,8 +49,7 @@ function ENT:Initialize()
         self:SetupSessionVars()
         self:GetPhysicsObject():EnableMotion( false )
 
-        self:SetKeyValue( "fademindist", 3000 )
-        self:SetKeyValue( "fademaxdist", 3500 )
+        campaignents_doFadeDistance( self, 3000 )
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end

@@ -17,6 +17,7 @@ function ENT:Initialize()
 
     self:SetupSessionVars()
     self:SetModel( "models/props_lab/tpplug.mdl" )
+    campaignents_doFadeDistance( self, 3000 )
 
     local phys = self:GetPhysicsObject()
     if phys and phys:IsValid() then
