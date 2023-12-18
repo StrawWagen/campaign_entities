@@ -30,6 +30,7 @@ ENT.MeleeHitSound = "Zombie.AttackHit"
 
 function ENT:Ambush()
     if not IsValid( self.waking_sequence ) then return end
+    self.waking_sequence:Fire( "BeginSequence", "", 0 )
 
     timer.Simple( self.MeleeDelay, function()
         if not IsValid( self ) then return end
@@ -38,6 +39,4 @@ function ENT:Ambush()
         self:MeleeAttack()
 
     end )
-
-    self.waking_sequence:Fire( "BeginSequence", "", 0 )
 end

@@ -54,7 +54,7 @@ function ENT:InitializeAmbusher()
     local wakeSeqName = fastzombie_name .. "_wake_seq"
 
     ambusher:SetName( fastzombie_name )
-    ambusher.sleepingNpcs_SourceEnt = self 
+    ambusher.sleepingNpcs_SourceEnt = self
 
     local riseStyle = self.RiseStyle
     if istable( riseStyle ) then
@@ -131,6 +131,7 @@ end
 function ENT:Ambush()
     if not IsValid( self.waking_sequence ) then return end
     self.waking_sequence:Fire( "BeginSequence", "", 0 )
+
     if self:GetIsSilent() then return end
     self.ambusher:EmitSound( "npc/fast_zombie/wake1.wav", 75, 100 )
 

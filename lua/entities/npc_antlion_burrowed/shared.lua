@@ -349,6 +349,7 @@ function ENT:CreateAmbusher()
 
     if not IsValid( self.ambusher ) then return end
     self.ambusher.DoNotDuplicate = true
+    self.ambusher:SetNPCState( NPC_STATE_SCRIPT )
 
     if not WireLib then return end
     Wire_TriggerOutput( self, "Sleeper", self.ambusher )
