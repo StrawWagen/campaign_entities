@@ -281,7 +281,11 @@ function ENT:SetupAPC( apc )
     if self:GetStatic() then return end
 
     local boneID = apc:LookupBone( "APC.Gun_Base" )
-    local bonePos, _ = apc:GetBonePosition( boneID )
+    local bonePos = apc:WorldSpaceCenter()
+    if boneID then
+        bonePos, _ = apc:GetBonePosition( boneID )
+
+    end
 
     local driver = ents.Create( "npc_apcdriver" )
     driver.DoNotDuplicate = true
