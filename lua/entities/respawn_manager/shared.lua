@@ -245,7 +245,7 @@ end
 
 function ENT:PlyInitializeRespawn( ply )
     ply.respawnManagerBailPos = ply:GetPos()
-    ply.respawnManagerTimeout = CurTime() + 1.5
+    ply.respawnManagerTimeout = CurTime() + 5
     ply.respawnManagerBeingManaged = true
     ply.respawnManagerNeedsStatsSet = true
 

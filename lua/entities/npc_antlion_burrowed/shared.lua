@@ -349,7 +349,12 @@ function ENT:CreateAmbusher()
 
     if not IsValid( self.ambusher ) then return end
     self.ambusher.DoNotDuplicate = true
-    self.ambusher:SetNPCState( NPC_STATE_SCRIPT )
+    timer.Simple( 0, function()
+        if not IsValid( self ) then return end
+        if not IsValid( self.ambusher ) then return end
+        self.ambusher:SetNPCState( NPC_STATE_ALERT )
+
+    end )
 
     if not WireLib then return end
     Wire_TriggerOutput( self, "Sleeper", self.ambusher )
