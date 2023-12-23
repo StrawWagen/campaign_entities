@@ -309,12 +309,18 @@ function ENT:SetupCannister( canister )
 
         end
 
-        -- this camera stuff is some bulll shit!
+        -- tested cannister with startingheight set to all kinds of stuff
+        -- worked best on the most maps with this spaghetti mess 
         local theCamera
         local cameras = ents.FindByClass( "sky_camera" )
         for _, camera in ipairs( cameras ) do
             if not IsValid( camera ) then continue end
             theCamera = camera
+
+        end
+        -- map has no skybox!
+        if not theCamera then
+            theCamera = self
 
         end
         canister:SetKeyValue( "StartingHeight", theCamera:WorldToLocal( self:GetPos() ).z )
