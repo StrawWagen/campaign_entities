@@ -310,7 +310,7 @@ function ENT:SetupCannister( canister )
         end
 
         -- tested cannister with startingheight set to all kinds of stuff
-        -- worked best on the most maps with this spaghetti mess 
+        -- worked best on the most maps with this spaghetti mess
         local theCamera
         local cameras = ents.FindByClass( "sky_camera" )
         for _, camera in ipairs( cameras ) do
