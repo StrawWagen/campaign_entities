@@ -516,8 +516,6 @@ local function fieldShouldCollide( field, colliding )
 
 end
 
-local _IsValid = IsValid
-
 function ENT:ResetShouldCollideCache()
     self.fieldShouldCollideCache = {}
 
