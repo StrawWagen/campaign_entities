@@ -50,3 +50,10 @@ function ENT:SelfSetup()
 
     end
 end
+
+function ENT:CanAutoCopyThe( the )
+    if not IsValid( the ) then return end
+    if the:IsNPC() then return true, true end
+    return true, false
+
+end

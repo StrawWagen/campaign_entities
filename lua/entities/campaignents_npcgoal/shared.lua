@@ -231,28 +231,29 @@ end
 
 function ENT:MakeTheAssaultPoint()
     if not IsValid( self.assaultPoint ) then -- only need 1!
-        -- don't delete assaultpoints when they have npcs goin to em, crashes session!
+        -- WARNING don't delete assaultpoints when they have npcs goin to em, crashes session!
         local assaultPoint = ents.Create( "assault_assaultpoint" )
         self.assaultPoint = assaultPoint
 
         assaultPoint.campaignents_ParentGoal = self
 
         assaultPoint:SetKeyValue( "targetname", self:AssaultTargetName() )
-        assaultPoint:SetKeyValue( "allowdiversionradius", 0 )
-        assaultPoint:SetKeyValue( "allowdiversion", 1 )
         assaultPoint:SetKeyValue( "assaulttimeout", 1 )
-        if self.GetIsWorthDyingFor and self:GetIsWorthDyingFor() ~= true then
-            assaultPoint:SetKeyValue( "clearoncontact", 1 )
-
-        end
 
         assaultPoint:SetPos( self:GetPos() )
         assaultPoint:SetAngles( self:GetAngles() )
 
         assaultPoint:Spawn()
-
         -- just in case!
         assaultPoint.DoNotDuplicate = true
+
+        -- IS worth dying for
+        if self.GetIsWorthDyingFor and self:GetIsWorthDyingFor() == true then return end
+
+        -- is not worth dying for, dont throw our life away for it!
+        assaultPoint:Fire( "SetClearOnContact", 1 )
+        assaultPoint:Fire( "SetAllowDiversion", 1 )
+        assaultPoint:SetKeyValue( "allowdiversionradius", 0 )
 
     else
         local assaultPoint = self.assaultPoint

@@ -184,9 +184,11 @@ function ENT:SetupDataTables()
 end
 
 function ENT:SpawnFunction( spawner, tr )
-    local SpawnPos = tr.HitPos + vector_up * 120
+    local originalPos = tr.HitPos
+    local distUp = 120
+    local spawnPos = originalPos + vector_up * distUp
     local ent = ents.Create( self.ClassName )
-    ent:SetPos( SpawnPos )
+    ent:SetPos( spawnPos )
 
     if IsValid( spawner ) and spawner.GetAimVector then
         local dir = -spawner:GetAimVector()
@@ -202,7 +204,37 @@ function ENT:SpawnFunction( spawner, tr )
     effectdata:SetEntity( ent )
     util.Effect( "propspawn", effectdata )
 
+    -- hardcoded!
+    if spawner:GetActiveWeapon():GetClass() == "gmod_tool" and IsValid( tr.Entity ) and ent.CanCopy then
+        -- certiancopy, did the player 100% mean for this to copy?
+        local canCopy, certianCopy = ent:CanAutoCopyThe( tr.Entity )
+        if canCopy then
+
+            distUp = math.Clamp( tr.Entity:GetModelRadius(), 25, 160 )
+            spawnPos = originalPos + vector_up * distUp
+            ent:SetPos( spawnPos )
+
+            timer.Simple( 0, function()
+                if not IsValid( ent ) then return end
+                if not IsValid( tr.Entity ) then return end
+                ent:CaptureCollidersInfo( tr.Entity )
+                ent:SetAngles( tr.Entity:GetAngles() )
+
+                ent:TryToPrintOwnerMessage( "Autocopied!" )
+
+                if not certianCopy then return end
+                SafeRemoveEntity( tr.Entity )
+
+            end )
+        end
+    end
+
     return ent
+
+end
+
+function ENT:CanAutoCopyThe( the )
+    return IsValid( the ), false
 
 end
 
@@ -474,7 +506,15 @@ function ENT:SpawnThing()
     end, newThing )
     self.campaignents_Thing = newThing
     self.spawnedCount = self.spawnedCount + 1
-    self:IfGoalMakeSpawnedGoThere()
+
+    -- let them edit the goal before we ask it to set itself up!
+    if not campaignents_EnabledAi() then
+        self.doDelayedMakeSpawnedGotoGoals = true
+
+    else
+        self:IfGoalMakeSpawnedGoThere()
+
+    end
 
     self:AdditionalSpawnStuff( newThing )
 
@@ -560,6 +600,12 @@ function ENT:Think()
         end
     elseif not self.aiWasDisabled and not enabledAi then
         self.aiWasDisabled = true
+
+    end
+
+    if self.doDelayedMakeSpawnedGotoGoals and enabledAi then
+        self.doDelayedMakeSpawnedGotoGoals = nil
+        self:IfGoalMakeSpawnedGoThere()
 
     end
 
@@ -673,10 +719,14 @@ if CLIENT then
     end
 end
 
-function ENT:CaptureCollidersInfo()
-    local simpleCollider = util.QuickTrace( self:GetPos(), vector_up * 1, hitAnythingButPlacers )
+function ENT:CaptureCollidersInfo( theHit )
+    if not IsValid( theHit ) then
+        local simpleCollider = util.QuickTrace( self:GetPos(), vector_up * 1, hitAnythingButPlacers )
 
-    local theHit = simpleCollider.Entity
+        theHit = simpleCollider.Entity
+
+    end
+
     if not IsValid( theHit ) then return end
 
     if theHit == self.campaignents_Thing then return end

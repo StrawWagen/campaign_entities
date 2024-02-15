@@ -145,3 +145,8 @@ function ENT:DoHintSound()
     self:EmitSound( theSound, 75, 100 + math.Rand( -5, 5 ), 0.7, CHAN_STATIC )
 
 end
+
+function ENT:PostInitialized( ambusher )
+    ambusher:SetNPCState( NPC_STATE_SCRIPT )
+
+end

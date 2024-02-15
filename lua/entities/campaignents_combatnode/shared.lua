@@ -388,6 +388,7 @@ end
 function ENT:MakeNPCGotoUs( npc, offset )
     npc.campaignents_NextMove = CurTime() + 0.35 -- flat delay
     npc:SetSaveValue( "m_vecLastPosition", self:GetPos() + offset )
+    npc.campaignents_CombatNodeOccupied = true
     npc:SetSchedule( SCHED_FORCED_GO_RUN )
 
 end
@@ -417,3 +418,11 @@ function ENT:TryToPrintOwnerMessage( MSG )
 
     end
 end
+
+hook.Add( "EntityTakeDamage", "campaignents_combatnode_breakspell", function( damaged )
+    if damaged.campaignents_CombatNodeOccupied and damaged:IsCurrentSchedule( SCHED_FORCED_GO_RUN ) then
+        damaged.campaignents_CombatNodeOccupied = nil
+        damaged:SetSchedule( SCHED_ALERT_FACE )
+
+    end
+end )

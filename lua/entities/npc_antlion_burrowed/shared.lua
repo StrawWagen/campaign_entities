@@ -84,34 +84,6 @@ end
 
 if not SERVER then return end
 
-function ENT:SpawnFunction( ply, tr )
-    local SpawnPos = tr.HitPos + tr.HitNormal
-
-    local dir = -ply:GetAimVector()
-    dir.z = 0
-    dir:Normalize()
-
-    local ent
-
-    -- save entity compatibility patch.
-    -- ( it's yuck )
-    if not IsValid( self ) then
-        ent = ents.Create( self.MyClass )
-
-    else
-        ent = self
-
-    end
-
-    ent:SetPos( SpawnPos )
-    ent:SetAngles( dir:Angle() )
-    ent:Spawn()
-    ent:Activate()
-
-    return ent
-
-end
-
 function ENT:Initialize()
     self:SetModel( self.DebugModel )
     self:SetColor( self.DebugColor )
@@ -260,6 +232,7 @@ function ENT:Think()
             if not IsValid( self ) then return end
             if not IsValid( self.ambusher ) then return end
             self:Ambush()
+            self:PostAmbushed( self.ambusher )
             if not WireLib then return end
             Wire_TriggerOutput( self, "Awake", 1 )
 
@@ -352,7 +325,7 @@ function ENT:CreateAmbusher()
     timer.Simple( 0, function()
         if not IsValid( self ) then return end
         if not IsValid( self.ambusher ) then return end
-        self.ambusher:SetNPCState( NPC_STATE_ALERT )
+        self:PostInitialized( self.ambusher )
 
     end )
 
@@ -379,6 +352,12 @@ end
 function ENT:Ambush()
     self.ambusher:Fire( "unburrow", "", 0 )
 
+end
+
+function ENT:PostInitialized()
+end
+
+function ENT:PostAmbushed()
 end
 
 function ENT:DoHintSound()

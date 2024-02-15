@@ -52,6 +52,7 @@ end
 
 
 function campaignents_captureGoalID( self )
+    if not self.GetGoalID then return end
     local simpleCollider = util.QuickTrace( self:GetPos(), vector_up * 1, self )
 
     local theHit = simpleCollider.Entity
