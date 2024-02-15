@@ -532,13 +532,17 @@ function ENT:Think()
     if not SERVER then return end
     local enabledAi = campaignents_EnabledAi()
 
-    if self.CanCopy and self:IsPhysgunPickedUp() then
-        if not printedMessage then
-            printedMessage = true
-            self:TryToPrintOwnerMessage( "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
+    if self:IsPhysgunPickedUp() then
+        if self.CanCopy then
+            if not printedMessage then
+                printedMessage = true
+                self:TryToPrintOwnerMessage( "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
+
+            end
+            self:CaptureCollidersInfo()
 
         end
-        self:CaptureCollidersInfo()
+        campaignents_captureGoalID( self )
 
     end
 

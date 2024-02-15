@@ -105,37 +105,6 @@ function ENT:OnDuplicated()
 
 end
 
-function ENT:CaptureGoalID()
-    local simpleCollider = util.QuickTrace( self:GetPos(), vector_up * 1, self )
-
-    local theHit = simpleCollider.Entity
-
-    if not IsValid( theHit ) then
-        local stuff = ents.FindInSphere( self:GetPos(), 50 )
-        for _, thing in ipairs( stuff ) do
-            if thing ~= self and thing.GetGoalID then
-                theHit = thing
-
-            end
-        end
-    end
-
-    if not IsValid( theHit ) then return end
-    if not theHit.GetGoalID then return end
-
-    if self:GetGoalID() == -1 and theHit:GetGoalID() == -1 then
-        local randId = math.random( 1, 1000 )
-        self:SetGoalID( randId )
-        theHit:SetGoalID( randId )
-        self:EmitSound( "buttons/button24.wav" )
-
-    elseif self:GetGoalID() ~= theHit:GetGoalID() then
-        self:SetGoalID( theHit:GetGoalID() )
-        self:EmitSound( "buttons/button24.wav" )
-
-    end
-end
-
 if CLIENT then
     local beamMat = Material( "egon_middlebeam" )
 
@@ -206,7 +175,7 @@ function ENT:Think()
             self:TryToPrintOwnerMessage( "NPC Goal: Drag me into a respawner so i can copy it's GoalID!" )
 
         end
-        self:CaptureGoalID()
+        campaignents_captureGoalID( self )
 
     end
 
@@ -229,6 +198,7 @@ function ENT:Think()
         end
 
         local distSqrToGoal = runningNpc:GetPos():DistToSqr( self:GetPos() )
+
         if runningNpc:IsCurrentSchedule( approachSchedule ) then
             -- hard cancel
             if interrupted then
@@ -243,7 +213,6 @@ function ENT:Think()
         elseif not interrupted then
             if distSqrToGoal < 150^2 then
                 self.goRunningNpcs[ runningNpc:GetCreationID() ] = nil
-                continue
 
             else
                 if worthDyingFor then
@@ -300,7 +269,7 @@ function ENT:MakeNpcGotoAssaultPoint( npc )
     if alreadyExistingRallies and #alreadyExistingRallies >= 1 then return end
 
     local ralliesPos = npc:GetPos()
-    local dirToMe = ralliesPos - self:GetPos()
+    local dirToMe = self:GetPos() - ralliesPos 
     local angToMe = -( dirToMe:GetNormalized() ):Angle()
 
     local rallyPoint = ents.Create( "assault_rallypoint" )

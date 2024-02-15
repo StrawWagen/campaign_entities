@@ -54,9 +54,11 @@ local forceFields = {}
 function ENT:Initialize()
 
     forceFields[self] = true
+    self:UpdateShouldCollideHook()
 
-    self:CallOnRemove( "removefromforcefields", function( me )
+    self:CallOnRemove( "campaignents_removefrom_forcefieldcache", function( me )
         forceFields[me] = nil
+        me:UpdateShouldCollideHook()
 
     end )
 
@@ -481,7 +483,7 @@ end
 
 -- returns two vars
 -- first, if it should collide, second, if the result should never be cached ( big optimisation ) 
-local function fieldShouldCollide( field, colliding )
+local function fieldShouldCollideExpensive( field, colliding )
     local collidingsClass = colliding:GetClass()
 
     -- !!!!!!!! return false, ent can pass through no problem, return TRUE and ent will be stopped by shield !!!!!!!!
@@ -521,13 +523,14 @@ function ENT:ResetShouldCollideCache()
 
 end
 
-hook.Add( "ShouldCollide", "campaignents_realistic_forcefield", function( entA, entB )
-    local aIsForcefield = forceFields[entA]
-    local bIsForcefield = forceFields[entB]
-    if not ( aIsForcefield or bIsForcefield ) then return end
+local function fieldShouldCollideCheap( entA, entB )
+    if not forceFields[entA] and not forceFields[entB] then return end
 
     local colliding
     local field
+
+    local aIsForcefield = forceFields[entA]
+    local bIsForcefield = forceFields[entB]
 
     if bIsForcefield then
         colliding = entA
@@ -548,7 +551,7 @@ hook.Add( "ShouldCollide", "campaignents_realistic_forcefield", function( entA, 
     end
 
     local blockCaching
-    shouldCollide, blockCaching = fieldShouldCollide( field, colliding, collidingsClass )
+    shouldCollide, blockCaching = fieldShouldCollideExpensive( field, colliding, collidingsClass )
 
     if blockCaching == true then return shouldCollide end
 
@@ -556,7 +559,23 @@ hook.Add( "ShouldCollide", "campaignents_realistic_forcefield", function( entA, 
 
     return shouldCollide
 
-end )
+end
+
+local theHooksName = "campaignents_realistic_forcefield"
+local hookExists
+
+function ENT:UpdateShouldCollideHook()
+    local shouldBeHook = table.Count( forceFields ) >= 1
+    if shouldBeHook and not hookExists then
+        hook.Add( "ShouldCollide", theHooksName, fieldShouldCollideCheap )
+        hookExists = true
+
+    elseif not shouldBeHook and hookExists then
+        hookExists = nil
+        hook.Remove( "ShouldCollide", theHooksName )
+
+    end
+end
 
 function TurnOff( self )
     for _, ent in ipairs( ents.FindByName( "Forcefield" .. self:GetCreationID() ) ) do -- this code smells!
@@ -618,7 +637,7 @@ function ENT:TryToDissolveWithTraces()
 
         local found = ents.FindAlongRay( currStart, currEnd, dissolveMins, dissolveMaxs )
         for _, entity in ipairs( found ) do
-            if fieldShouldCollide( self, entity ) == false then continue end
+            if fieldShouldCollideExpensive( self, entity ) == false then continue end
             if damagedStuff[ entity:GetCreationID() ] then continue end -- just damage it once....
 
             local hadHealth = entity:Health() > 0
