@@ -269,7 +269,7 @@ function ENT:MakeNpcGotoAssaultPoint( npc )
     if alreadyExistingRallies and #alreadyExistingRallies >= 1 then return end
 
     local ralliesPos = npc:GetPos()
-    local dirToMe = self:GetPos() - ralliesPos 
+    local dirToMe = self:GetPos() - ralliesPos
     local angToMe = -( dirToMe:GetNormalized() ):Angle()
 
     local rallyPoint = ents.Create( "assault_rallypoint" )
