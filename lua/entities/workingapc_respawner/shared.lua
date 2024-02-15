@@ -47,16 +47,16 @@ end
 
 function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    1, "NeedToLookAway",    { KeyName = "needtolookaway",       Edit = { order = 2, type = "Bool", category = "Generic Conditions" } } )
-    self:NetworkVar( "Bool",    2, "On",                { KeyName = "on",            Edit = { readonly = true } } )
-    self:NetworkVar( "Bool",    3, "ForceSpawn",        { KeyName = "forcespawn",          Edit = { readonly = true } } )
+    self:NetworkVar( "Bool",    2, "On",                { KeyName = "on",                   Edit = { readonly = true } } )
+    self:NetworkVar( "Bool",    3, "ForceSpawn",        { KeyName = "forcespawn",           Edit = { readonly = true } } )
 
     self:NetworkVar( "Int",     2, "MaxToSpawn",        { KeyName = "maxtospawn",           Edit = { order = 4, type = "Int", min = -1, max = 120, category = "Generic Conditions" } } )
     self:NetworkVar( "Int",     3, "MinSpawnInterval",  { KeyName = "minspawninterval",     Edit = { order = 5, type = "Int", min = 0, max = 240, category = "Generic Conditions" } } )
     self:NetworkVar( "Int",     4, "SpawnRadiusStart",  { KeyName = "spawnradiusstart",     Edit = { order = 6, type = "Int", min = 0, max = 32000, category = "Generic Conditions" } } )
     self:NetworkVar( "Int",     5, "SpawnRadiusEnd",    { KeyName = "spawnradiusend",       Edit = { order = 7, type = "Int", min = 0, max = 32000, category = "Generic Conditions" } } )
 
-    self:NetworkVar( "Int",     6, "MyId",              { KeyName = "myid",                Edit = { order = 9, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
-    self:NetworkVar( "Int",     7, "IdToWaitFor",       { KeyName = "idtowaitfor",         Edit = { order = 10, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     6, "MyId",              { KeyName = "myid",                 Edit = { order = 9, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     7, "IdToWaitFor",       { KeyName = "idtowaitfor",          Edit = { order = 10, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
 
     self:NetworkVar( "Int",     8, "GoalID",            { KeyName = "goalid",               Edit = { readonly = true } } )
     self:NetworkVar( "Bool",    4, "ShowGoalLinks",     { KeyName = "forcespawn",           Edit = { readonly = true } } )

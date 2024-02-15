@@ -49,7 +49,16 @@ function ENT:SetupSessionVars()
 
 end
 
+local forceFields = {}
+
 function ENT:Initialize()
+
+    forceFields[self] = true
+
+    self:CallOnRemove( "removefromforcefields", function( me )
+        forceFields[me] = nil
+
+    end )
 
     self:SetupSessionVars()
 
@@ -515,22 +524,18 @@ function ENT:ResetShouldCollideCache()
 end
 
 hook.Add( "ShouldCollide", "campaignents_realistic_forcefield", function( entA, entB )
-    if not _IsValid( entA ) then return end
-    if not _IsValid( entB ) then return end
-
-    if not entA.isForceField and not entB.isForceField then
-        return
-
-    end
+    local aIsForcefield = forceFields[entA]
+    local bIsForcefield = forceFields[entB]
+    if not ( aIsForcefield or bIsForcefield ) then return end
 
     local colliding
     local field
 
-    if entB.isForceField then
+    if bIsForcefield then
         colliding = entA
         field = entB
 
-    elseif entA.isForceField then
+    elseif aIsForcefield then
         colliding = entB
         field = entA
 

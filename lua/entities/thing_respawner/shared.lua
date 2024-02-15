@@ -116,24 +116,26 @@ function ENT:DoDefaultVariables()
 end
 
 function ENT:SetupDataTables()
-    self:NetworkVar( "String",  0, "ModelToSpawn",       { KeyName = "modeltospawn",        Edit = { order = 1, type = "String",    category = "Thing spawned", waitforenter = true } } )
-    self:NetworkVar( "String",  1, "ClassToSpawn",       { KeyName = "classtospawn",        Edit = { order = 2, type = "String",    category = "Thing spawned", waitforenter = true } } )
-    self:NetworkVar( "String",  2, "NPCWeapon",          { KeyName = "weaponclass",         Edit = { order = 3, type = "String",    category = "Thing spawned", waitforenter = true } } )
-    self:NetworkVar( "Bool",    5, "DropToFloor",        { KeyName = "droptofloor",         Edit = { order = 4, type = "Bool",      category = "Thing spawned" } } )
+    local i = 1
+    self:NetworkVar( "String",  0, "ModelToSpawn",       { KeyName = "modeltospawn",        Edit = { order = i, type = "String",        category = "Thing spawned", waitforenter = true } } )
+    self:NetworkVar( "String",  1, "ClassToSpawn",       { KeyName = "classtospawn",        Edit = { order = i + 1, type = "String",    category = "Thing spawned", waitforenter = true } } )
+    self:NetworkVar( "String",  2, "NPCWeapon",          { KeyName = "weaponclass",         Edit = { order = i + 1, type = "String",    category = "Thing spawned", waitforenter = true } } )
+    self:NetworkVar( "Bool",    5, "DropToFloor",        { KeyName = "droptofloor",         Edit = { order = i + 1, type = "Bool",      category = "Thing spawned" } } )
+    self:NetworkVar( "Bool",    6, "NoAutoModel",        { KeyName = "noautomodel",         Edit = { order = i + 1, type = "Bool",      category = "Thing spawned", title = "Disable NPC model Auto-Detect?" } } )
 
-    self:NetworkVar( "Bool",    1, "NeedToLookAway",     { KeyName = "needtolookaway",      Edit = { order = 5, type = "Bool",      category = "Generic conditions" } } )
-    self:NetworkVar( "Bool",    2, "On",                 { KeyName = "on",                  Edit = { readonly = true } } )
-    self:NetworkVar( "Bool",    3, "ForceSpawn",         { KeyName = "forcespawn",          Edit = { readonly = true } } )
-    self:NetworkVar( "Int",     1, "MaxToSpawn",         { KeyName = "maxtospawn",          Edit = { order = 6, type = "Int", min = -1, max = 120, category = "Generic conditions" } } )
-    self:NetworkVar( "Int",     2, "MinSpawnInterval",   { KeyName = "minspawninterval",    Edit = { order = 7, type = "Int", min = 0, max = 240, category = "Generic conditions" } } )
-    self:NetworkVar( "Int",     3, "SpawnRadiusStart",   { KeyName = "spawnradiusstart",    Edit = { order = 8, type = "Int", min = 0, max = 32000, category = "Generic conditions" } } )
-    self:NetworkVar( "Int",     4, "SpawnRadiusEnd",     { KeyName = "spawnradiusend",      Edit = { order = 9, type = "Int", min = 0, max = 32000, category = "Generic conditions" } } )
+    self:NetworkVar( "Bool",    1, "NeedToLookAway",     { KeyName = "needtolookaway",      Edit = { order = i + 1, type = "Bool",      category = "Generic conditions" } } )
+    self:NetworkVar( "Bool",    2, "On",                 { KeyName = "on",                  Edit = { readonly = true } } ) -- wire inputs internal
+    self:NetworkVar( "Bool",    3, "ForceSpawn",         { KeyName = "forcespawn",          Edit = { readonly = true } } ) -- wire inputs internal
+    self:NetworkVar( "Int",     1, "MaxToSpawn",         { KeyName = "maxtospawn",          Edit = { order = i + 1, type = "Int",       min = -1, max = 120, category = "Generic conditions" } } )
+    self:NetworkVar( "Int",     2, "MinSpawnInterval",   { KeyName = "minspawninterval",    Edit = { order = i + 1, type = "Int",       min = 0, max = 240, category = "Generic conditions" } } )
+    self:NetworkVar( "Int",     3, "SpawnRadiusStart",   { KeyName = "spawnradiusstart",    Edit = { order = i + 1, type = "Int",       min = 0, max = 32000, category = "Generic conditions" } } )
+    self:NetworkVar( "Int",     4, "SpawnRadiusEnd",     { KeyName = "spawnradiusend",      Edit = { order = i + 1, type = "Int",       min = 0, max = 32000, category = "Generic conditions" } } )
 
-    self:NetworkVar( "Int",     5, "MyId",               { KeyName = "myid",                Edit = { order = 10, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
-    self:NetworkVar( "Int",     6, "IdToWaitFor",        { KeyName = "idtowaitfor",         Edit = { order = 11, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     5, "MyId",               { KeyName = "myid",                Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     6, "IdToWaitFor",        { KeyName = "idtowaitfor",         Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
 
-    self:NetworkVar( "Int",     7, "GoalID",             { KeyName = "goalid",              Edit = { order = 12, type = "Int", min = -1, max = 1000, category = "NPC Goal", waitforenter = true } } )
-    self:NetworkVar( "Bool",    4, "ShowGoalLinks",      { KeyName = "forcespawn",          Edit = { order = 13, type = "Bool",      category = "NPC Goal" } } )
+    self:NetworkVar( "Int",     7, "GoalID",             { KeyName = "goalid",              Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "NPC Goal", waitforenter = true } } )
+    self:NetworkVar( "Bool",    4, "ShowGoalLinks",      { KeyName = "forcespawn",          Edit = { order = i + 1, type = "Bool",      category = "NPC Goal" } } )
 
     if SERVER then
         self:DoDefaultVariables()
@@ -376,6 +378,16 @@ function ENT:IfGoalMakeSpawnedGoThere()
     end
 end
 
+function ENT:SetEntsModelComprehensive( ent, model )
+    local keys = ent:GetKeyValues()
+    if keys["model"] then
+        ent:SetKeyValue( self:GetModelToSpawn() )
+
+    end
+    ent:SetModel( model )
+
+end
+
 function ENT:SpawnThing()
     local modelRad = self:GetModelRadius()
     local downOffset
@@ -388,7 +400,8 @@ function ENT:SpawnThing()
     end
 
     local simpleDownTrace = util.QuickTrace( self:GetPos(), -vector_up * downOffset, hitAnythingButPlacers )
-    local posToSetTo = simpleDownTrace.HitPos + simpleDownTrace.HitNormal * 5
+    local offsetOffGround = simpleDownTrace.HitNormal * 5
+    local posToSetTo = simpleDownTrace.HitPos + offsetOffGround
     local classToSpawn = self:GetClassToSpawn()
 
     local sentsTable =  scripted_ents.GetStored( classToSpawn )
@@ -397,7 +410,8 @@ function ENT:SpawnThing()
     local defaultPly = Entity( 1 )
     if sentsTable and sentsTable.SpawnFunction and IsValid( defaultPly ) then
         newThing = sentsTable:SpawnFunction( defaultPly, simpleDownTrace, classToSpawn )
-        newThing:SetModel( self:GetModelToSpawn() )
+        self:SetEntsModelComprehensive( newThing, self:GetModelToSpawn() )
+
         newThing:SetAngles( self:GetAngles() )
         didSpawnFunc = true
 
@@ -406,7 +420,7 @@ function ENT:SpawnThing()
         if not IsValid( newThing ) then return end
         newThing:SetPos( posToSetTo )
         -- set model before finished spawning so npc's Spawn can override it, if it wants
-        newThing:SetModel( self:GetModelToSpawn() )
+        self:SetEntsModelComprehensive( newThing, self:GetModelToSpawn() )
 
         local ang = self:GetAngles()
         -- ik breaks if i dont do this
@@ -422,14 +436,26 @@ function ENT:SpawnThing()
 
     end
 
-    if self:GetDropToFloor() then
-        newThing:DropToFloor()
-
-    end
-
     -- check after it spawned, stuff like npcs override their model, so we follow!
     if newThing:GetModel() ~= self:GetModelToSpawn() then
-        self:SetModelToSpawn( newThing:GetModel() )
+        -- config says it NEEDS to be this model!
+        if self:GetNoAutoModel() then
+            timer.Simple( 0, function()
+                if not IsValid( self ) then return end
+                if not IsValid( newThing ) then return end
+                self:SetEntsModelComprehensive( newThing, self:GetModelToSpawn() )
+                -- dont fall thru displacements!
+                newThing:SetPos( posToSetTo + offsetOffGround * 4 )
+
+            end )
+        else
+            self:SetModelToSpawn( newThing:GetModel() )
+
+        end
+    end
+
+    if self:GetDropToFloor() then
+        newThing:DropToFloor()
 
     end
 
@@ -647,10 +673,9 @@ function ENT:CaptureCollidersInfo()
     local simpleCollider = util.QuickTrace( self:GetPos(), vector_up * 1, hitAnythingButPlacers )
 
     local theHit = simpleCollider.Entity
+    if not IsValid( theHit ) then return end
 
     if theHit == self.campaignents_Thing then return end
-
-    if not IsValid( theHit ) then return end
     if theHit == self.lastInfoCaptured then return end
 
     self.lastInfoCaptured = theHit
