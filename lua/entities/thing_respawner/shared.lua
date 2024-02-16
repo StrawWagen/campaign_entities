@@ -203,9 +203,10 @@ function ENT:SpawnFunction( spawner, tr )
     local effectdata = EffectData()
     effectdata:SetEntity( ent )
     util.Effect( "propspawn", effectdata )
+    local activeWep = spawner:GetActiveWeapon()
+    local justToolGunned = activeWep and activeWep:GetClass() == "gmod_tool" and spawner:GetTool():GetMode() == "creator" and spawner:KeyDown( IN_ATTACK )
 
-    -- hardcoded!
-    if spawner:GetActiveWeapon():GetClass() == "gmod_tool" and IsValid( tr.Entity ) and ent.CanCopy then
+    if justToolGunned and IsValid( tr.Entity ) and ent.CanCopy then
         -- certiancopy, did the player 100% mean for this to copy?
         local canCopy, certianCopy = ent:CanAutoCopyThe( tr.Entity )
         if canCopy then
