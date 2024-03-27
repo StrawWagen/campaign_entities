@@ -58,23 +58,6 @@ function ENT:Initialize()
     end
 end
 
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
-end
-
 function ENT:EnsureOnlyOneExists()
     if IsValid( STRAW_NodrawManager ) and STRAW_NodrawManager ~= self then
         SafeRemoveEntity( STRAW_NodrawManager )
@@ -93,7 +76,7 @@ function ENT:SelfSetup()
 
     if campaignents_EnabledAi() then
         local MSG = "I make stuff stop rendering for people and work best with a fog editor, distance is configurable. You can also configure the max thing size, so big things don't just dissapear from the skyline!\nThis message will not appear when duped."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         nextNodrawMessage = CurTime() + 25
 
     end

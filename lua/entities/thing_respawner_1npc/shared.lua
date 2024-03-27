@@ -40,10 +40,10 @@ function ENT:SelfSetup()
     if nextRespawnerMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "I'm actially a Thing Respawner\nMy settings are just changed so I only spawn ONE thing!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         timer.Simple( 0, function()
             MSG = "This message will not appear when duped in."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
         end )
 
         nextRespawnerMessage = CurTime() + 25

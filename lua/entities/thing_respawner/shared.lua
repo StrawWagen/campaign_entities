@@ -59,7 +59,7 @@ function ENT:DoIdNotify()
                 MSG = "I dont have an id anymore"
 
             end
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
         end
 
         -- it prints twice???? i dont want to find out why, this hack works fine
@@ -203,6 +203,7 @@ function ENT:SpawnFunction( spawner, tr )
     local effectdata = EffectData()
     effectdata:SetEntity( ent )
     util.Effect( "propspawn", effectdata )
+
     local activeWep = spawner:GetActiveWeapon()
     local justToolGunned = activeWep and activeWep:GetClass() == "gmod_tool" and spawner:GetTool():GetMode() == "creator" and spawner:KeyDown( IN_ATTACK )
 
@@ -221,7 +222,7 @@ function ENT:SpawnFunction( spawner, tr )
                 ent:CaptureCollidersInfo( tr.Entity )
                 ent:SetAngles( tr.Entity:GetAngles() )
 
-                ent:TryToPrintOwnerMessage( "Autocopied!" )
+                campaignents_MessageOwner( ent, "Autocopied!" )
 
                 if not certianCopy then return end
                 SafeRemoveEntity( tr.Entity )
@@ -268,13 +269,7 @@ function ENT:Initialize()
 
         self:SetCustomCollisionCheck( true )
 
-        local obj = self:GetPhysicsObject()
-
-        if IsValid( obj ) then
-            obj:Sleep()
-            obj:EnableMotion( false )
-
-        end
+        campaignEnts_EasyFreeze( self )
 
         self:ResetVars()
 
@@ -337,10 +332,10 @@ function ENT:SelfSetup()
     if nextRespawnerMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "Noclip and look up!\nI spawn stuff in! Check my context menu!!\nDrag me into something to \"copy\" it!\nIf 'need to look away' is set, I'll only spawn stuff behind your back!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         timer.Simple( 0, function()
             MSG = "Change 'maxtospawn' and I'll eventually stop spawning stuff!\nThe radius settings change how far before I spawn!\nThis message will not appear when duped in."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
         end )
 
         nextRespawnerMessage = CurTime() + 25
@@ -577,7 +572,7 @@ function ENT:Think()
         if self.CanCopy then
             if not printedMessage then
                 printedMessage = true
-                self:TryToPrintOwnerMessage( "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
+                campaignents_MessageOwner( self, "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
 
             end
             self:CaptureCollidersInfo()
@@ -691,7 +686,7 @@ if CLIENT then
         cam.End2D()
 
     end
-    local beamMat = Material( "egon_middlebeam" )
+    local beamMat = Material( "sprites/physbeama" )
 
     function ENT:Draw()
         if campaignents_IsEditing() then
@@ -750,7 +745,7 @@ function ENT:FindAndManageWithThisId( targetId )
 
     if targetId <= 0 and self:GetCreationTime() + 1 < CurTime() then
         local MSG = "Not waiting for anything!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
         self.entsToWaitFor = {}
 
@@ -777,7 +772,7 @@ function ENT:FindAndManageWithThisId( targetId )
     if self:GetCreationTime() + 1 > CurTime() then return end
 
     local MSG = "Waiting for " .. #entsToWaitFor .. " other respawners with id " .. targetId .. " to have all spawned at least 1 thing."
-    self:TryToPrintOwnerMessage( MSG )
+    campaignents_MessageOwner( self, MSG )
 
 end
 
@@ -807,23 +802,6 @@ function ENT:AdditionalSpawnStuff( spawned )
 
     if class == "npc_combine_s" and math.random( 1, 100 ) > 50 then
         spawned:SetKeyValue( "NumGrenades", 2 )
-
-    end
-end
-
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
 
     end
 end

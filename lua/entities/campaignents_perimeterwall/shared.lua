@@ -144,7 +144,7 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
 
         self:GetPhysicsObject():SetMass( 50000 )
-        self:GetPhysicsObject():EnableMotion( false )
+        campaignEnts_EasyFreeze( self )
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
@@ -235,7 +235,7 @@ function ENT:DoInternalWall( doWall )
         internalWall:SetModel( "models/props_combine/combineinnerwall001c.mdl" )
         internalWall:Spawn()
 
-        internalWall:GetPhysicsObject():EnableMotion( false )
+        campaignEnts_EasyFreeze( internalWall )
 
         internalWall.PhysgunDisabled = true
         internalWall.DoNotDuplicate = true
@@ -252,10 +252,10 @@ function ENT:SelfSetup()
     if nextMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "I slowly advance when spawned into chains!\nI'll stop after 'stepping' two times!\nYou can config that though!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         timer.Simple( 0, function()
             MSG = "I'll only take 'steps' when a player is nearer than my ActivationDist, set it to max to disable this!\nUncheck DoIntenralWall to get rid of the barrier inside me!\nThis message will not appear when duped in."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
 
         end )
         nextMessage = CurTime() + 25
@@ -716,21 +716,4 @@ function ENT:IsConnectedToWall( ent, distNeeded )
 
     return isConnected, myClosest, theirClosest
 
-end
-
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
 end

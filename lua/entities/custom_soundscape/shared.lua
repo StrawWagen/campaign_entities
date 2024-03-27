@@ -58,7 +58,7 @@ function ENT:SetupDataTables()
     self:NetworkVarNotify( "IsAmbient", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
-        self.actualSound:Stop()
+        self:destroySound()
 
         timer.Simple( 0.1, function()
             if not IsValid( self ) then return end
@@ -71,7 +71,7 @@ function ENT:SetupDataTables()
     self:NetworkVarNotify( "FadeBehindWalls", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
-        self.actualSound:Stop()
+        self:destroySound()
 
         timer.Simple( 0.1, function()
             if not IsValid( self ) then return end
@@ -81,6 +81,7 @@ function ENT:SetupDataTables()
         end )
     end )
 
+    -- wiremod
     self:NetworkVarNotify( "IsOn", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
@@ -98,7 +99,7 @@ function ENT:SetupDataTables()
     self:NetworkVarNotify( "Decibels", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
-        self.actualSound:Stop()
+        self:destroySound()
 
         timer.Simple( 0.1, function()
             if not IsValid( self ) then return end
@@ -111,7 +112,7 @@ function ENT:SetupDataTables()
     self:NetworkVarNotify( "SoundPath", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
-        self.actualSound:Stop()
+        self:destroySound()
 
         timer.Simple( 0.1, function()
             if not IsValid( self ) then return end
@@ -124,7 +125,7 @@ function ENT:SetupDataTables()
     self:NetworkVarNotify( "DSP", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
-        self.actualSound:Stop()
+        self:destroySound()
 
         timer.Simple( 0.1, function()
             if not IsValid( self ) then return end
@@ -137,7 +138,7 @@ function ENT:SetupDataTables()
     self:NetworkVarNotify( "MaxPlayCount", function()
         if not IsValid( self ) then return end
         if not self.actualSound then return end
-        self.actualSound:Stop()
+        self:destroySound()
 
         timer.Simple( 0.1, function()
             if not IsValid( self ) then return end
@@ -365,11 +366,52 @@ function ENT:setupSound( interval )
         self.actualSound:Stop()
 
     end
-    self.actualSound = CreateSound( soundSource, self:GetSoundPath(), CLocalPlayerFilter )
+
+    local soundPathToPlay
+    local pitch = self:GetPitch()
+    local sounds = string.Explode( " ", self:GetSoundPath() )
+
+    if #sounds > 1 then
+        table.Shuffle( sounds )
+        local lastSound = self.lastSoundPathPlayed
+        for _ = 1, #sounds do
+            soundPathToPlay = table.remove( sounds, 1 )
+            soundPathToPlay = string.Trim( soundPathToPlay )
+            if soundPathToPlay ~= lastSound then
+                break
+
+            end
+        end
+
+        self.lastSoundPathPlayed = soundPathToPlay
+
+        local div = pitch / 100
+        local donePlaying = SoundDuration( soundPathToPlay )
+        local timerName = "campaignents " .. self:GetCreationID() .. "stopPlaying"
+
+        local resetTime = donePlaying / div
+        resetTime = resetTime + ( resetTime * math.Rand( 1, 2 ) )
+
+        timer.Remove( timerName )
+        timer.Create( timerName, resetTime, 1, function()
+            if not IsValid( self ) then return end
+            if not self.actualSound then return end
+            self:destroySound()
+            self.actualSound = nil
+
+        end )
+    else
+        soundPathToPlay = sounds[1]
+        soundPathToPlay = string.Trim( soundPathToPlay )
+
+    end
+
+    self.actualSound = CreateSound( soundSource, soundPathToPlay, CLocalPlayerFilter )
+    self.actualPathPlaying = soundPathToPlay
     self:ResetSoundStats()
     self.actualSound:SetDSP( self:GetDSP() )
     self.actualSound:SetSoundLevel( self:GetDecibels() )
-    self.actualSound:PlayEx( 0, self:GetPitch() )
+    self.actualSound:PlayEx( 0, pitch )
 
     timer.Simple( 0, function()
         if not IsValid( self ) then return end
@@ -377,6 +419,16 @@ function ENT:setupSound( interval )
         self:manageSound( ply, interval )
 
     end )
+end
+
+function ENT:ActualPathPlayed()
+    if self.actualPathPlaying then
+        return self.actualPathPlaying
+
+    else
+        return self:GetSoundPath()
+
+    end
 end
 
 function ENT:manageSound( listener, interval )
@@ -434,7 +486,7 @@ end
 function ENT:DoSoundListThink( ply, transition )
     if not self:GetIsAmbient() then return end
     if not IsValid( ply ) then return end
-    local path = self:GetSoundPath()
+    local path = self:ActualPathPlayed()
 
     ply.soundsPlaying = ply.soundsPlaying or {}
     local conflictingSounds = ply.soundsPlaying[ path ] or {}
@@ -474,7 +526,7 @@ end
 
 function ENT:WeAreTheBestSound( ply )
     if not self:GetIsAmbient() then return nil end
-    local conflictingSounds = ply.soundsPlaying[ self:GetSoundPath() ]
+    local conflictingSounds = ply.soundsPlaying[ self:ActualPathPlayed() ]
     if #conflictingSounds > 1 then
         local toSort = table.Copy( conflictingSounds )
         local plysPos = ply:GetPos()
@@ -495,7 +547,7 @@ end
 
 function ENT:conflictingSoundsCount( ply )
     if not ply.soundsPlaying then return 0 end
-    local conflictingSounds = ply.soundsPlaying[ self:GetSoundPath() ]
+    local conflictingSounds = ply.soundsPlaying[ self:ActualPathPlayed() ]
     if not conflictingSounds then return 0 end
     return #conflictingSounds
 
@@ -519,8 +571,8 @@ end
 
 function ENT:destroySound()
     if not self.actualSound then return end
-    self.actualSound:Stop()
     self:DoSoundListThink( LocalPlayer(), false )
+    self.actualSound:Stop()
 
 end
 

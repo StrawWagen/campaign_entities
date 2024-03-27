@@ -19,6 +19,32 @@ if not istable( noclipBestowingKeys ) then
 
 end
 
+function ENT:SpawnFunction( _, tr, class )
+    if not tr.Hit then return end
+
+    local ent = ents.Create( class )
+    if not IsValid( ent ) then return end
+
+    local spawnPos = tr.HitPos
+
+    local hitNormal = tr.HitNormal
+    ent:SetPos( spawnPos )
+    -- get in right angles
+    ent:SetAngles( hitNormal:Angle() )
+
+    -- then rotate again, now with a correct getright
+    local fixedAng = ent:GetAngles()
+    fixedAng:RotateAroundAxis( ent:GetRight(), -90 )
+    ent:SetAngles( fixedAng )
+
+    ent:Spawn()
+
+    campaignEnts_EasyFreeze( ent )
+
+    return ent
+
+end
+
 function ENT:SetupDataTables()
     self:NetworkVar( "Bool", 0, "On",           { KeyName = "on",           Edit = { readonly = true } } )
     self:NetworkVar( "Bool", 1, "DoBlocking",   { KeyName = "doblocking",   Edit = { type = "Bool", order = 1 } } )

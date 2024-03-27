@@ -115,6 +115,7 @@ function ENT:TriggerInput( iname, value )
     end
 end
 
+-- if player is moving slower than this, we only wake up if they're REALLY close!
 local speedToWakeUp = 65^2
 
 function ENT:Think()
@@ -200,6 +201,7 @@ function ENT:Think()
 
             if thing and IsValid( thing ) and thing:IsPlayer() then
                 local thingPos = thing:GetPos()
+                -- if ents are below me dont wake up!
                 local thingIsOnSameLevelAsMe = thingPos.z > belowMeCutoff
                 local thingIsMoving = thing:GetVelocity():LengthSqr() > speedToWakeUp
                 local thingIsReallyClose = thingPos:DistToSqr( myPos ) < wayTooCloseDist
@@ -228,7 +230,12 @@ function ENT:Think()
         if self.ambusher:GetMaxHealth() > 0 and self.ambusher:Health() <= 0 then return end
         self:AwakenTeammates()
         self.ambusher.DoNotDuplicate = true
-        timer.Simple( self:GetWakeDelay(), function()
+        local delay = self:GetWakeDelay()
+        if self.instantWake then
+            delay = 0
+
+        end
+        timer.Simple( delay, function()
             if not IsValid( self ) then return end
             if not IsValid( self.ambusher ) then return end
             self:Ambush()

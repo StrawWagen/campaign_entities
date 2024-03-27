@@ -36,23 +36,6 @@ function ENT:Initialize()
     end
 end
 
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
-end
-
 
 function ENT:Silence()
     local soundscapes = ents.FindByClass( "env_soundscape" )
@@ -91,7 +74,7 @@ function ENT:BlockerSetup()
     campaignents_nextAmbientDeafenerMessage = CurTime() + 30
 
     local MSG = "Soundscape Silencer: Your ears should be much clearer!"
-    self:TryToPrintOwnerMessage( MSG )
+    campaignents_MessageOwner( self, MSG )
 
 end
 

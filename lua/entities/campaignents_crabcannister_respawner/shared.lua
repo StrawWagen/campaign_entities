@@ -67,10 +67,11 @@ function ENT:SetupDataTables()
 
     self:NetworkVar( "Bool",    4, "Static",            { KeyName = "static",               Edit = { order = 11, type = "Bool", category = "Headcrab Cannister" } } )
     self:NetworkVar( "Bool",    5, "RealTrajectory",    { KeyName = "realtrajectory",       Edit = { order = 12, type = "Bool", category = "Headcrab Cannister" } } )
-    self:NetworkVar( "Int",     8, "CrabType",          { KeyName = "crabtype",             Edit = { order = 13, type = "Int", min = 0, max = 2, category = "Headcrab Cannister" } } )
-    self:NetworkVar( "Int",     9, "CrabCount",         { KeyName = "crabcount",            Edit = { order = 14, type = "Int", min = 1, max = 10, category = "Headcrab Cannister" } } )
-    self:NetworkVar( "Int",     10, "HitDamage",        { KeyName = "hitdamage",            Edit = { order = 15, type = "Int", min = 0, max = 500, category = "Headcrab Cannister" } } )
-    self:NetworkVar( "Int",     11, "DamageRadius",     { KeyName = "damageradius",         Edit = { order = 16, type = "Int", min = 0, max = 750, category = "Headcrab Cannister" } } )
+    self:NetworkVar( "Bool",    6, "NoDelay",           { KeyName = "nodelay",              Edit = { order = 13, type = "Bool", category = "Headcrab Cannister" } } )
+    self:NetworkVar( "Int",     8, "CrabType",          { KeyName = "crabtype",             Edit = { order = 14, type = "Int", min = 0, max = 2, category = "Headcrab Cannister" } } )
+    self:NetworkVar( "Int",     9, "CrabCount",         { KeyName = "crabcount",            Edit = { order = 15, type = "Int", min = 1, max = 10, category = "Headcrab Cannister" } } )
+    self:NetworkVar( "Int",     10, "HitDamage",        { KeyName = "hitdamage",            Edit = { order = 16, type = "Int", min = 0, max = 500, category = "Headcrab Cannister" } } )
+    self:NetworkVar( "Int",     11, "DamageRadius",     { KeyName = "damageradius",         Edit = { order = 17, type = "Int", min = 0, max = 750, category = "Headcrab Cannister" } } )
 
     if SERVER then
         self:SetNeedToLookAway( false )
@@ -87,6 +88,7 @@ function ENT:SetupDataTables()
 
         self:SetStatic( false )
         self:SetRealTrajectory( true )
+        self:SetNoDelay( false )
         self:SetCrabType( 0 )
         self:SetCrabCount( 5 )
         self:SetHitDamage( 150 )
@@ -147,9 +149,9 @@ function ENT:SelfSetup()
     if nextRespawnerMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "Noclip and look up!\nI set a target for a Headcrab Cannister!\nOpen my context menu!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         MSG = "This message will not appear when duped in."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
         nextRespawnerMessage = CurTime() + 25
 
@@ -163,7 +165,7 @@ function ENT:BlockGoodSpawn()
         if not donePrint then
             donePrint = true
             local MSG = "Headcrab cannister(s) will wait for AI to be enabled..."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
 
         end
         return true
@@ -187,8 +189,7 @@ function ENT:SpawnThing()
     newThing.DoNotDuplicate = true
 
     local timeNeeded = 0
-    if not self:GetStatic() then
-
+    if not self:GetStatic() and not self:GetNoDelay() then
         if nextSpawnCrabCanister > CurTime() then
             timeNeeded = math.abs( nextSpawnCrabCanister - CurTime() )
 
@@ -213,23 +214,35 @@ function ENT:SpawnThing()
             Wire_TriggerOutput( self, "Spawned", newThing )
 
         end
+        local noDelay = self:GetNoDelay()
+        local realTrajectory = self:GetRealTrajectory()
+        local instantLanding = not realTrajectory and noDelay
 
         local timeToSpawn = airTime + -1
-        if self:GetRealTrajectory() then
+        if realTrajectory or noDelay then
             timeToSpawn = 0
 
         end
 
         if not self:GetStatic() then
-            self:LaunchSound()
-            timer.Simple( airTime + -1, function()
+            local incomingDelay = airTime + -1
+            local hintDelay = airTime + -2
+            if instantLanding then
+                incomingDelay = 0
+                hintDelay = 0
+
+            else-- normal behaviour
+                self:LaunchSound()
+
+            end
+            timer.Simple( incomingDelay, function()
                 if not IsValid( self ) then return end
                 if game.SinglePlayer() then return end -- this only doesnt play in multiplayer
                 self:IncomingSound()
 
             end )
 
-            timer.Simple( airTime + -2, function()
+            timer.Simple( hintDelay, function()
                 if not IsValid( self ) then return end
                 if not IsValid( newThing ) then return end
                 local landingTr = self:CannisterLandingTr( newThing )

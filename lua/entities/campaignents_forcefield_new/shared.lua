@@ -98,8 +98,9 @@ function ENT:DoShieldCollisions()
     end
 
     self:PhysicsFromMesh( verts )
-    self:GetPhysicsObject():SetMaterial( physMat )
-    self:GetPhysicsObject():EnableMotion( false )
+    local object = self:GetPhysicsObject()
+    object:SetMaterial( physMat )
+    object:EnableMotion( false )
 
     return true
 

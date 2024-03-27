@@ -55,23 +55,6 @@ function ENT:Initialize()
     end
 end
 
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
-end
-
 local occupiedCommands = occupiedCommands or {}
 
 function ENT:OccupyCommand( targetCommand )
@@ -114,7 +97,7 @@ function ENT:MandateThink()
     local valid, cmd, targetCommand = self:ActiveBlocker()
     if blacklistedCommands[ targetCommand ] then
         local MSG = "Command Mandator:  " .. targetCommand .. " Can't be changed by me!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         return
 
     end
@@ -122,7 +105,7 @@ function ENT:MandateThink()
     if not mandatorIsEnabled:GetBool() then return end
     if game.IsDedicated() and not enabledOnDediServers:GetBool() then
         local MSG = "Command Mandator: Functionality is disabled on dedicated servers.\nChange " .. dediServersCmdName .. " to 1, to enable it."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         return
 
     end
@@ -139,11 +122,11 @@ function ENT:MandateThink()
 
     elseif not weOccupy and not self.duplicatedIn then
         local MSG = "Command Mandator:  " .. targetCommand .. "  Is already overriden!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
     elseif not valid and targetCommand ~= "" and not self.duplicatedIn then
         local MSG = "Command Mandator:  " .. targetCommand .. "  Is an invalid command!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
     end
 end
@@ -156,7 +139,7 @@ function ENT:BlockerSetup()
     if campaignents_nextCommandMandatorMessage > CurTime() then return end
     campaignents_nextCommandMandatorMessage = CurTime() + 30
     local MSG = "Command Mandator: Check my context menu options! \nThis message will not appear when duped in."
-    self:TryToPrintOwnerMessage( MSG )
+    campaignents_MessageOwner( self, MSG )
 
 end
 

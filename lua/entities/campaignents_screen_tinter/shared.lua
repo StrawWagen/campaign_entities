@@ -64,9 +64,9 @@ function ENT:SelfSetup()
     if nextTinterMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "I'm like a 0 distance fog editor!\nBut i tint equipped weapons too!\nCheck my context menu!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         MSG = "This message will not appear when duped in."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
         nextTinterMessage = CurTime() + 25
 
@@ -81,22 +81,6 @@ end
 function ENT:UpdateTransmitState()
     return TRANSMIT_ALWAYS
 
-end
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
 end
 
 if not CLIENT then return end

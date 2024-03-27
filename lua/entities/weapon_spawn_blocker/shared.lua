@@ -66,23 +66,6 @@ function ENT:OnDuplicated()
 
 end
 
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
-end
-
 local nextWeaponSpawnBlockerMessage = 0
 function ENT:BlockerSetup()
     self:EnsureOnlyOneExists()
@@ -90,12 +73,12 @@ function ENT:BlockerSetup()
     if nextWeaponSpawnBlockerMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "Weapon spawn blocker: Disable AI to enable debug mode \nThis message will not appear when duped in."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         nextWeaponSpawnBlockerMessage = CurTime() + 25
 
     elseif not campaignents_EnabledAi() then
         local MSG = "Weapon spawn blocker: Check my context menu option!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         nextWeaponSpawnBlockerMessage = CurTime() + 25
 
     end

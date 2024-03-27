@@ -2,6 +2,28 @@ AddCSLuaFile( "cl_init.lua" ) -- Make sure clientside
 AddCSLuaFile( "shared.lua" ) -- and shared scripts are sent.
 include( "shared.lua" )
 
+
+local vec_up = Vector( 0, 0, 1 )
+
+function ENT:SpawnFunction( _, tr, class )
+    if not tr.Hit then return end
+
+    local ent = ents.Create( class )
+    if not IsValid( ent ) then return end
+
+    local spawnPos = tr.HitPos
+
+    local hitNormal = tr.HitNormal
+    local offset = hitNormal:Cross( vec_up ) * 12.5
+    offset = offset + -hitNormal
+    ent:SetPos( spawnPos + offset )
+    ent:SetAngles( hitNormal:Angle() )
+    ent:Spawn()
+
+    return ent
+
+end
+
 function ENT:Initialize()
     self:SetModel( "models/props_lab/tpplugholder_single.mdl" )
 
@@ -11,12 +33,9 @@ function ENT:Initialize()
     self:SetMoveType( MOVETYPE_VPHYSICS )
     self:SetSolid( SOLID_VPHYSICS )
 
-    local phys = self:GetPhysicsObject()
-    if phys:IsValid() then
-        -- stop annoying bouncing off plug, when plugged after spawning!
-        phys:EnableMotion( false )
+    -- stop annoying bouncing off plug, when plugged after spawning!
+    campaignEnts_EasyFreeze( self )
 
-    end
     if not WireLib then return end
 
     self.Inputs = Wire_CreateInputs( self, { "Powered" } )

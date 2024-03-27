@@ -93,20 +93,8 @@ function ENT:Initialize()
 
     self:DoShieldCollisions()
 
-    local physObj = self:GetPhysicsObject()
-    if IsValid( physObj ) then
-        physObj:EnableMotion( false )
-        physObj:Sleep()
-
-    end
-
-    local startsPhysObj = self.startDummy:GetPhysicsObject()
-
-    if IsValid( startsPhysObj ) then
-        startsPhysObj:Sleep()
-        startsPhysObj:EnableMotion( false )
-
-    end
+    campaignEnts_EasyFreeze( self )
+    campaignEnts_EasyFreeze( self.startDummy )
 
     timer.Simple( 0, function()
         if not self:IsValid() then return end
@@ -138,13 +126,7 @@ function ENT:Initialize()
         self:DeleteOnRemove( self.endDummy )
         self:SetDummyEnd( self.endDummy )
 
-        local endsPhysObj = self.endDummy:GetPhysicsObject()
-
-        if IsValid( endsPhysObj ) then
-            endsPhysObj:Sleep()
-            endsPhysObj:EnableMotion( false )
-
-        end
+        campaignEnts_EasyFreeze( self.endDummy )
 
     end )
 end

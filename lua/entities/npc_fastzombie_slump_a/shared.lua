@@ -89,6 +89,7 @@ hook.Add( "EntityTakeDamage", "sleepingnpcs_wakeupon_dmg", function( damaged, da
     if not IsValid( damaged.sleepingNpcs_SourceEnt ) then return end
     damaged.sleepingNpcs_SourceEnt:NextThink( CurTime() + 0.05 )
     damaged.sleepingNpcs_SourceEnt.forcedAmbush = CurTime()
+    damaged.sleepingNpcs_SourceEnt.instantWake = true
 
 end )
 

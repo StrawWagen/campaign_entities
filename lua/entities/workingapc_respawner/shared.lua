@@ -163,9 +163,9 @@ function ENT:SelfSetup()
     if nextRespawnerMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "Noclip and look up!\nI spawn a boss APC!\nOpen my context menu!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         MSG = "This message will not appear when duped in."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
         nextRespawnerMessage = CurTime() + 25
 
@@ -227,7 +227,7 @@ function ENT:GetMyNPCGoal()
 end
 
 if CLIENT then
-    local beamMat = Material( "egon_middlebeam" )
+    local beamMat = Material( "sprites/physbeama" )
 
     function ENT:Draw()
         if campaignents_IsEditing() then

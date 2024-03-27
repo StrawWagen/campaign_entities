@@ -44,7 +44,11 @@ function meta:CampaignEnts_IsInNoclip()
 
 end
 
+local doFadeDist = CreateConVar( "campaignents_sv_fadeents", 1, { FCVAR_ARCHIVE, FCVAR_REPLICATED }, "Enable/disable the fadeout on laggy Campaign Entities?" )
+
 function campaignents_doFadeDistance( ent, dist )
+    if not doFadeDist:GetBool() then return end
+
     ent:SetKeyValue( "fademindist", dist )
     ent:SetKeyValue( "fademaxdist", dist + ( dist / 10 ) )
 
@@ -89,6 +93,46 @@ function campaignents_captureGoalID( self )
     elseif self:GetGoalID() ~= theHit:GetGoalID() then
         self:SetGoalID( theHit:GetGoalID() )
         self:EmitSound( "buttons/button24.wav" )
+
+    end
+end
+
+local doHints = CreateConVar( "campaignents_sv_hints", 1, { FCVAR_ARCHIVE, FCVAR_REPLICATED }, "Enable/disable the campaign entity hints?" )
+
+function campaignents_MessageOwner( ent, message )
+    if not doHints:GetBool() then return end
+
+    local owner
+    if CPPI then
+        owner = ent:CPPIGetOwner()
+
+    end
+    if not IsValid( owner ) and IsValid( ent:GetCreator() ) then
+        owner = ent:GetCreator()
+
+    end
+    if not IsValid( owner ) and IsValid( ent:GetOwner() ) then
+        owner = ent:GetOwner()
+
+    end
+    -- check if player, GetOwner is used all over, eg, headcrab shot off of a zombie
+    if IsValid( owner ) and owner.PrintMessage then
+        owner:PrintMessage( HUD_PRINTTALK, message )
+        return
+
+    end
+    -- leave poor dedicated servers alone :(
+    if game.IsDedicated() then return end
+
+    PrintMessage( HUD_PRINTTALK, message )
+
+end
+
+function campaignEnts_EasyFreeze( ent )
+    local phys = ent:GetPhysicsObject()
+    if phys:IsValid() then
+        -- stop annoying bouncing off plug, when plugged after spawning!
+        phys:EnableMotion( false )
 
     end
 end

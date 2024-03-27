@@ -66,7 +66,7 @@ function ENT:Initialize()
         self:SetUseType( SIMPLE_USE )
         self:SetMaterial( "phoenix_storms/stripes" )
 
-        self:GetPhysicsObject():EnableMotion( false )
+        campaignEnts_EasyFreeze( self )
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
             self:SelfSetup()
@@ -81,10 +81,10 @@ function ENT:SelfSetup()
     if nextMessage > CurTime() then return end
     if campaignents_EnabledAi() then
         local MSG = "If people touch me, they'll respawn on top of me!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         timer.Simple( 0, function()
             MSG = "This message will not appear when duped in."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
 
         end )
         nextMessage = CurTime() + 25
@@ -96,23 +96,6 @@ function ENT:OnDuplicated()
     self.duplicatedIn = true
     self:SetupSessionVars()
 
-end
-
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
 end
 
 function ENT:linkPlayerToMe( toLink )

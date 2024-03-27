@@ -32,11 +32,11 @@ function ENT:SetupDataTables()
         if old == new then return end
 
         local MSG = "NPC Goal: Reload the save for IsWorthDyingFor changes to apply. ( crash prevention. )"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
 
         if new == true then
             MSG = "IsWorthDyingFor Is set to true...\nNPCS will blindly attack this goal.\nThrow away their life just at the slim chance they will glance upon it...."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
 
         end
     end )
@@ -65,8 +65,7 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_DEBRIS_TRIGGER )
         self:SetMaterial( "phoenix_storms/bluemetal" )
         campaignents_doFadeDistance( self, 3000 )
-
-        self:GetPhysicsObject():EnableMotion( false )
+        campaignEnts_EasyFreeze( self )
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
@@ -87,10 +86,10 @@ function ENT:SelfSetup()
 
     if campaignents_EnabledAi() then
         local MSG = "Noclip and edit me!\nDrag me into a thing respawner for EZPZ mode!\nBut, a technical explanation,\nif my GoalID matches the GoalID of a thing respawner,\nI'll try and make any npcs it spawns, run to me!"
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         timer.Simple( 0, function()
             MSG = "The short line above me is the direction combine soldiers will face!\nThis will not appear when duped in."
-            self:TryToPrintOwnerMessage( MSG )
+            campaignents_MessageOwner( self, MSG )
 
         end )
 
@@ -106,7 +105,7 @@ function ENT:OnDuplicated()
 end
 
 if CLIENT then
-    local beamMat = Material( "egon_middlebeam" )
+    local beamMat = Material( "sprites/physbeama" )
 
     function ENT:Draw()
         if campaignents_IsEditing() or not campaignents_EnabledAi() then
@@ -172,7 +171,7 @@ function ENT:Think()
     if self:IsPlayerHolding() then
         if not printedMessage then
             printedMessage = true
-            self:TryToPrintOwnerMessage( "NPC Goal: Drag me into a respawner so i can copy it's GoalID!" )
+            campaignents_MessageOwner( self, "NPC Goal: Drag me into a respawner so i can copy it's GoalID!" )
 
         end
         campaignents_captureGoalID( self )
@@ -315,21 +314,4 @@ function ENT:ApcChasePath( npc )
     npc.campaignents_ApcDriver:Fire( "SetDriversMaxSpeed", 0.9 )
     npc.campaignents_ApcDriver:Fire( "SetDriversMinSpeed", 0.35 )
 
-end
-
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
 end

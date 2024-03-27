@@ -62,23 +62,6 @@ function ENT:Initialize()
     end
 end
 
-function ENT:TryToPrintOwnerMessage( MSG )
-    local done = nil
-    if CPPI then
-        local owner, _ = self:CPPIGetOwner()
-        if IsValid( owner ) then
-            owner:PrintMessage( HUD_PRINTTALK, MSG )
-            done = true
-
-        end
-    end
-    if not done then
-        PrintMessage( HUD_PRINTTALK, MSG )
-        done = true
-
-    end
-end
-
 function ENT:EnsureOnlyOneExists()
     if IsValid( STRAW_RespawnManager ) and STRAW_RespawnManager ~= self then
         SafeRemoveEntity( STRAW_RespawnManager )
@@ -104,6 +87,7 @@ local nextRespawnMessage = 0
 function ENT:BlockerSetup()
     self:EnsureOnlyOneExists()
     timer.Simple( 0.1, function()
+        if not IsValid( self ) then return end
         for _, currPly in ipairs( player.GetAll() ) do
             if currPly:Alive() then
                 self:SavePlyRespawnPos( currPly )
@@ -112,6 +96,7 @@ function ENT:BlockerSetup()
         end
     end )
     timer.Simple( 2, function()
+        if not IsValid( self ) then return end
         for _, currPly in ipairs( player.GetAll() ) do
             if currPly:Alive() then
                 self:SavePlyRespawnPos( currPly )
@@ -124,7 +109,7 @@ function ENT:BlockerSetup()
 
     if campaignents_EnabledAi() then
         local MSG = "Checkpoint, Dynamic: I save respawn positions depending on my context menu options!\nWhen people respawn, I put them at their last respawn position!\nThis message will not appear when duped in."
-        self:TryToPrintOwnerMessage( MSG )
+        campaignents_MessageOwner( self, MSG )
         nextRespawnMessage = CurTime() + 25
 
     end
