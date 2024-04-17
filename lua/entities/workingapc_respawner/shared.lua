@@ -70,6 +70,14 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Float",   0, "APCDamageMul",      { KeyName = "apcdamagemul",         Edit = { order = 14, type = "float", min = 0.5, max = 3, category = "Combine APC" } } )
 
     if SERVER then
+        self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
+            if not SERVER then return end
+            if not IsValid( self ) then return end
+
+            campaignents_TrackPlyProximity( self, new )
+
+        end )
+
         self:SetNeedToLookAway( false )
         self:SetOn( true )
 

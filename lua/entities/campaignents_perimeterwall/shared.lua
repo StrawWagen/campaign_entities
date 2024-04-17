@@ -39,6 +39,11 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Vector",  0, "OriginalPos",       { KeyName = "originalpos",          Edit = { readonly = true } } )
 
     if SERVER then
+        self:NetworkVarNotify( "ActivationDist", function( _, _, _, new )
+            campaignents_TrackPlyProximity( self, new )
+
+        end )
+
         self:SetDoRandomSteps( true )
         self:SetDoInternalWall( true )
 
@@ -301,23 +306,15 @@ function ENT:DecideToTakeAStep()
     -- only step when ply was near one time!
     if self.wasClosePly ~= true then
         local activationDist = self:GetActivationDist()
-        if activationDist >= 11999 then self.wasClosePly = true return end
+        if activationDist >= 11999 then
+            campaignents_StopTrackingPlyProximity( self )
+            self.wasClosePly = true
+            return
 
-        activationDist = activationDist^2
-
-        local myPos = self:GetPos()
-        local allPlayers = player.GetAll()
-        local wasClose = nil
-        for _, ply in ipairs( allPlayers ) do
-            if ply:GetPos():DistToSqr( myPos ) < activationDist then
-                wasClose = true
-                break
-
-            end
         end
 
-        if not wasClose then self:DoStepLater() return end
-        self.wasClosePly = true
+        if not self.wasClosePly then self:DoStepLater() return end
+        campaignents_StopTrackingPlyProximity( self )
 
     end
 
@@ -340,6 +337,13 @@ function ENT:DecideToTakeAStep()
         self.stepType = 1
 
     end )
+end
+
+function ENT:CampaignEnts_OnProximity()
+    if self.wasClosePly then return end
+    self.nextStep = CurTime()
+    self.wasClosePly = true
+
 end
 
 local wallAlmostBottom = Vector( 100, 0, -400 )
@@ -398,11 +402,11 @@ function ENT:Think()
             end
             self:DoStepLater()
             if stepType == 1 then
-                self:EmitSound( "ambient/machines/wall_move5.wav", 90, 100, 1, CHAN_STATIC )
-                self:EmitSound( "ambient/machines/floodgate_stop1.wav", 83, 80, 1, CHAN_STATIC )
+                self:EmitSound( "ambient/machines/wall_move5.wav", 85, 100, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
+                self:EmitSound( "ambient/machines/floodgate_stop1.wav", 83, 80, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
 
             elseif stepType == 2 then
-                self:EmitSound( "ambient/machines/wall_move1.wav", 90, 100, 1, CHAN_STATIC )
+                self:EmitSound( "ambient/machines/wall_move1.wav", 85, 100, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
                 self:WallSlideStart()
 
             end
@@ -410,7 +414,7 @@ function ENT:Think()
 
         -- getting ready to drop!
         if fraction >= 0.35 and oldFraction <= 0.35 and stepType == 1 then
-            self:EmitSound( "ambient/machines/wall_move2.wav", 90, 95, 1, CHAN_STATIC )
+            self:EmitSound( "ambient/machines/wall_move2.wav", 85, 95, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
 
         end
 
@@ -435,7 +439,7 @@ function ENT:Think()
             self.stepsTaken = self.stepsTaken + 1
 
             if stepType == 1 then
-                self:EmitSound( "ambient/machines/wall_crash1.wav", 90, 100 + math.random( -5, 5 ), 1, CHAN_STATIC )
+                self:EmitSound( "ambient/machines/wall_crash1.wav", 95, 100 + math.random( -5, 5 ), 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
                 self:WallLand()
 
             end
@@ -496,6 +500,7 @@ function ENT:ResetSteps()
     self:DoStepLater()
     self.takingAStep = false
     self.wasClosePly = false
+    campaignents_TrackPlyProximity( self, self:GetActivationDist() )
     self.stepsTaken = 0
     if not WireLib then return end
     Wire_TriggerOutput( self, "StepsTaken", self.stepsTaken )

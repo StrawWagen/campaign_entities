@@ -137,6 +137,14 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Int",     7, "GoalID",             { KeyName = "goalid",              Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "NPC Goal", waitforenter = true } } )
     self:NetworkVar( "Bool",    4, "ShowGoalLinks",      { KeyName = "forcespawn",          Edit = { order = i + 1, type = "Bool",      category = "NPC Goal" } } )
 
+    self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
+        if not SERVER then return end
+        if not IsValid( self ) then return end
+
+        campaignents_TrackPlyProximity( self, new )
+
+    end )
+
     if SERVER then
         self:DoDefaultVariables()
 
@@ -523,6 +531,16 @@ end
 function ENT:BlockGoodSpawn()
 end
 
+function ENT:CampaignEnts_ProximityFilter( ply )
+    local dobearingCheck = self:GetNeedToLookAway()
+    if dobearingCheck and EntIsLookingAtEnt( ply, self ) then
+        return
+
+    end
+    return true
+
+end
+
 function ENT:IsGoodSpawn( ignoreBearing )
 
     if self:GetOn() ~= true then return end
@@ -531,34 +549,25 @@ function ENT:IsGoodSpawn( ignoreBearing )
     local forcedSpawn = self.GetForceSpawn and self:GetForceSpawn()
     if forcedSpawn then return true end
 
-    local tooClose = nil
-    local somebodyCloseEnough = nil
-    local someoneIsLooking = nil
     local dobearingCheck = self:GetNeedToLookAway() and not ignoreBearing
     local minDistSqr = self:GetSpawnRadiusStart() ^ 2
     local maxDistSqr = self:GetSpawnRadiusEnd() ^ 2
     if minDistSqr == 0 and maxDistSqr == 0 then return false end -- dont waste perf!
 
-    for _, ply in ipairs( player.GetAll() ) do
-        if dobearingCheck and EntIsLookingAtEnt( ply, self ) then
-            someoneIsLooking = true
-            break
+    local ply = campaignEnts_PlyInProxmity( self )
 
-        end
-        local distToPlySqr = ply:GetPos():DistToSqr( self:GetPos() )
-        if distToPlySqr < minDistSqr then
-            tooClose = true
-            break
+    if not IsValid( ply ) then return false end
+    if dobearingCheck and EntIsLookingAtEnt( ply, self ) then
+        return
 
-        end
-        if distToPlySqr < maxDistSqr then
-            somebodyCloseEnough = true
+    end
+    local distToPlySqr = ply:GetPos():DistToSqr( self:GetPos() )
+    if distToPlySqr < minDistSqr then
+        return
 
-        end
     end
 
-    local goodSpawn = not someoneIsLooking and not tooClose and somebodyCloseEnough
-    return goodSpawn
+    return true
 
 end
 
@@ -605,7 +614,7 @@ function ENT:Think()
 
     end
 
-    -- if player is doing editing then we dont care about the limit
+    -- hit max spawn count! ignore max spawn count if the player's doing editing with ai disabled.
     if self:GetMaxToSpawn() > 0 and self.spawnedCount >= self:GetMaxToSpawn() and enabledAi then return end
     local forcedSpawn = self.GetForceSpawn and self:GetForceSpawn()
 
@@ -647,10 +656,14 @@ function ENT:Think()
         self.nextThingSpawn = CurTime() + time
 
     end
-    self.nextSpawningThink = CurTime() + 1
+    self.nextSpawningThink = CurTime() + 2
 
 end
 
+function ENT:CampaignEnts_OnProximity()
+    self.nextSpawningThink = CurTime()
+
+end
 
 
 if CLIENT then

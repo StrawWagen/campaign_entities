@@ -74,6 +74,14 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Int",     11, "DamageRadius",     { KeyName = "damageradius",         Edit = { order = 17, type = "Int", min = 0, max = 750, category = "Headcrab Cannister" } } )
 
     if SERVER then
+        self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
+            if not SERVER then return end
+            if not IsValid( self ) then return end
+
+            campaignents_TrackPlyProximity( self, new )
+
+        end )
+
         self:SetNeedToLookAway( false )
         self:SetOn( true )
 

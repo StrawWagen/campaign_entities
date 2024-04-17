@@ -136,3 +136,10 @@ function campaignEnts_EasyFreeze( ent )
 
     end
 end
+
+function campaignents_filterAllPlayers()
+    local filterAllPlayers = RecipientFilter()
+    filterAllPlayers:AddAllPlayers()
+    return filterAllPlayers
+
+end

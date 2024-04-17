@@ -211,7 +211,7 @@ local function npcsReactionSpeed( npc )
     npcsHpClamped = math.Clamp( npc:GetMaxHealth(), lowHp, highHp )
     local reactionSpeedScalar = ( npcsHpClamped + -lowHp ) / hpDiff
 
-    local reactionSpeed = reactDiff * reactionSpeedScalar -- get the opposite reaction speed
+    local reactionSpeed = reactDiff * reactionSpeedScalar -- get the reaction speed, but its opposite.
     reactionSpeed = math.abs( reactionSpeed - lowHpsReactionTime ) -- make opposite speed not opposite
     return reactionSpeed
 

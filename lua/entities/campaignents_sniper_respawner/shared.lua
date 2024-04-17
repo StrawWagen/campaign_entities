@@ -12,7 +12,7 @@ ENT.AdminOnly   = true
 
 ENT.Editable    = true
 ENT.DefaultModel = "models/combine_soldier.mdl"
-ENT.CanCopy = nil
+ENT.CanCopy = false
 
 local ourClass = "campaignents_sniper_respawner"
 
@@ -51,6 +51,14 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    4, "Visible",           { KeyName = "visible",              Edit = { order = 11, type = "Bool", category = "Combine Sniper" } } )
 
     if SERVER then
+        self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
+            if not SERVER then return end
+            if not IsValid( self ) then return end
+
+            campaignents_TrackPlyProximity( self, new )
+
+        end )
+
         self:SetNeedToLookAway( false )
         self:SetOn( true )
 

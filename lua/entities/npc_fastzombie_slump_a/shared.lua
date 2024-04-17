@@ -46,7 +46,7 @@ function ENT:InitializeAmbusher()
 
     local ambusher = ents.Create( self.AmbusherClass )
     ambusher:SetPos( self:GetPos() )
-    ambusher:SetKeyValue( "spawnflags", "646" )
+    ambusher:SetKeyValue( "spawnflags", bit.bor( SF_NPC_WAIT_FOR_SCRIPT, SF_NPC_FADE_CORPSE, SF_NPC_GAG ) )
     ambusher:Spawn()
     ambusher:Activate()
 
@@ -149,5 +149,17 @@ end
 
 function ENT:PostInitialized( ambusher )
     ambusher:SetNPCState( NPC_STATE_SCRIPT )
+
+    if not IsValid( self.waking_sequence ) then return end
+    self.waking_sequence:CallOnRemove( "campaignents_restorestate", function( _, theSent )
+        if not IsValid( theSent ) then return end
+        if not IsValid( theSent.ambusher ) then return end
+        if theSent.ambusher:Health() <= 0 then return end
+
+        -- stupid hack to remove GAG spawnflag
+        ambusher:SetKeyValue( "spawnflags", bit.bor( SF_NPC_FADE_CORPSE ) )
+        ambusher:Spawn()
+
+    end, self )
 
 end

@@ -56,14 +56,24 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Bool",   1, "CanChainWakeTeammates",      { KeyName = "canchainwaketeammates",    Edit = { order = 5, type = "Bool" } } )
     self:NetworkVar( "Bool",   2, "IsSilent",                   { KeyName = "issilent",                 Edit = { order = 6, type = "Bool" } } )
     self:NetworkVar( "Bool",   3, "ForceWake",                  { KeyName = "forcewake",                Edit = { readonly = true } } )
+    if SERVER then
+        self:NetworkVarNotify( "AmbushDistance", function( _, _, _, new )
+            if not SERVER then return end
+            if not IsValid( self ) then return end
 
-    self:SetAmbushDistance( self.AmbushDist )
-    self:SetTeammateWakeDist( self.AmbushDist )
-    self:SetWakeDelay( 0 )
-    self:SetWakeNearTeammates( false )
-    self:SetCanChainWakeTeammates( false )
-    self:SetIsSilent( false )
-    self:SetForceWake( false )
+            campaignents_TrackPlyProximity( self, new )
+
+        end )
+
+        self:SetAmbushDistance( self.AmbushDist )
+        self:SetTeammateWakeDist( self.AmbushDist )
+        self:SetWakeDelay( 0 )
+        self:SetWakeNearTeammates( false )
+        self:SetCanChainWakeTeammates( false )
+        self:SetIsSilent( false )
+        self:SetForceWake( false )
+
+    end
 
     self:PostSetupData()
 
@@ -116,12 +126,35 @@ function ENT:TriggerInput( iname, value )
 end
 
 -- if player is moving slower than this, we only wake up if they're REALLY close!
-local speedToWakeUp = 65^2
+local speedToWakeUp = 65
+
+function ENT:CampaignEnts_ProximityFilter( ply )
+    local ambushDist = self:GetAmbushDistance()
+    local wayTooCloseDist = math.max( ambushDist / 4, 50 ) ^ 2
+    local ambusher = self.ambusher
+    if not IsValid( ambusher ) then return end
+
+    local checkPos = ambusher:GetPos()
+    local belowMeCutoff = checkPos.z + -15
+
+    local speedNeededToWakeUp = speedToWakeUp * math.Rand( 0.9, 1.3 )
+
+    local plyPos = ply:GetPos()
+    -- if ents are below me dont wake up!
+    local plyIsOnSameLevelAsMe = plyPos.z > belowMeCutoff
+    local plyIsMoving = ply:GetVelocity():LengthSqr() > speedNeededToWakeUp^2
+    local plyIsReallyClose = plyPos:DistToSqr( checkPos ) < wayTooCloseDist
+    if ( plyIsMoving or plyIsReallyClose ) and plyIsOnSameLevelAsMe then
+        return true
+
+    end
+end
 
 function ENT:Think()
+    local ambusher = self.ambusher
     if self.ambushed then
         -- all done!
-        if not IsValid( self.ambusher ) or self.ambusher:Health() <= 0 then
+        if not IsValid( ambusher ) or ambusher:Health() <= 0 then
             SafeRemoveEntity( self )
 
         -- it's still alive, think slow!
@@ -142,7 +175,7 @@ function ENT:Think()
 
             self.hasPhysics = true
 
-            SafeRemoveEntity( self.ambusher )
+            SafeRemoveEntity( ambusher )
 
             if self.hadNoPhysics then
                 self:EmitSound( "physics/concrete/rock_impact_hard2.wav", 68, math.random( 90, 110 ) )
@@ -164,13 +197,13 @@ function ENT:Think()
         self:PhysicsInit( SOLID_NONE )
         self.hasPhysics = nil
 
-        if not IsValid( self.ambusher ) then
+        if not IsValid( ambusher ) then
             self:CreateAmbusher()
 
 
         end
-        if IsValid( self.ambusher ) then
-            self.ambusher.DoNotDuplicate = true
+        if IsValid( ambusher ) then
+            ambusher.DoNotDuplicate = true
 
         end
         -- ditto
@@ -182,36 +215,13 @@ function ENT:Think()
     if self.ambushed then return end
 
     local doAmbush = nil
-    local myPos = self:GetPos()
-    local ambushDist = self:GetAmbushDistance()
-    local wayTooCloseDist = math.min( ambushDist / 4, 50 ) ^ 2
-    local belowMeCutoff = myPos.z
-    if IsValid( self.ambusher ) then
-        belowMeCutoff = self.ambusher:GetPos().z
-
-    end
-
-    belowMeCutoff = belowMeCutoff + -15
 
     --debugoverlay.Sphere( myPos, ambushDist, 5, color_white, true )
 
-    -- search for plys very close to ent, very often
-    if not campaignents_IgnoringPlayers() then
-        for _, thing in pairs( ents.FindInSphere( myPos, ambushDist ) ) do
+    local waker = campaignEnts_PlyInProxmity( self )
+    if not campaignents_IgnoringPlayers() and IsValid( waker ) and self:CampaignEnts_ProximityFilter( waker ) then
+        doAmbush = true
 
-            if thing and IsValid( thing ) and thing:IsPlayer() then
-                local thingPos = thing:GetPos()
-                -- if ents are below me dont wake up!
-                local thingIsOnSameLevelAsMe = thingPos.z > belowMeCutoff
-                local thingIsMoving = thing:GetVelocity():LengthSqr() > speedToWakeUp
-                local thingIsReallyClose = thingPos:DistToSqr( myPos ) < wayTooCloseDist
-                if ( thingIsMoving or thingIsReallyClose ) and thingIsOnSameLevelAsMe then
-                    doAmbush = true
-                    break
-
-                end
-            end
-        end
     end
 
     if self.forcedAmbush and self.forcedAmbush < CurTime() then
@@ -226,10 +236,10 @@ function ENT:Think()
 
     if doAmbush then
         self.ambushed = true
-        if not IsValid( self.ambusher ) then return end
-        if self.ambusher:GetMaxHealth() > 0 and self.ambusher:Health() <= 0 then return end
+        if not IsValid( ambusher ) then return end
+        if ambusher:GetMaxHealth() > 0 and ambusher:Health() <= 0 then return end
         self:AwakenTeammates()
-        self.ambusher.DoNotDuplicate = true
+        ambusher.DoNotDuplicate = true
         local delay = self:GetWakeDelay()
         if self.instantWake then
             delay = 0
@@ -237,59 +247,48 @@ function ENT:Think()
         end
         timer.Simple( delay, function()
             if not IsValid( self ) then return end
-            if not IsValid( self.ambusher ) then return end
+            if not IsValid( ambusher ) then return end
             self:Ambush()
-            self:PostAmbushed( self.ambusher )
+            self:PostAmbushed( ambusher )
             if not WireLib then return end
             Wire_TriggerOutput( self, "Awake", 1 )
 
         end )
         return
-    elseif not self.ambushed and IsValid( self.ambusher ) then
+    elseif not self.ambushed and IsValid( ambusher ) then
         -- strong :think() frequency optimisations below
-        local farEnoughToSleepDist = ambushDist * 8
+        local ambushDist = self:GetAmbushDistance()
+        local farEnoughToSleepDist = ambushDist * 4
         farEnoughToSleepDist = math.Clamp( farEnoughToSleepDist, 0, 2500 )
 
-        local tooClosePlayer = self.tooClosePlayer
-
-        -- look for a player anywhere near us, if no player then we hibernate with long thinks, if player then we think fast
-        if not IsValid( tooClosePlayer ) then
-            for _, ply in ipairs( ents.FindByClass( "player" ) ) do
-                local closeEnough = ply:GetPos():DistToSqr( myPos ) < farEnoughToSleepDist^2
-                if closeEnough then
-                    tooClosePlayer = ply
-                    self.tooClosePlayer = tooClosePlayer
-                    break
+        local nearbyPlayer = self.campaignents_ProxNearbyPlayer
+        -- someone nearby, think faster! play hint sounds!
+        if IsValid( nearbyPlayer ) and ambusher:Health() > 0 then
+            local dist = nearbyPlayer:GetPos():DistToSqr( self:GetPos() )
+            if dist < farEnoughToSleepDist^2 then
+                -- 0, 200 hack
+                if math.random( 0, 200 ) < self.HintSoundChance then
+                    self:DoHintSound()
 
                 end
+                if dist > ( ambushDist + 75 ) then
+                    self:NextThink( CurTime() + math.Rand( 1, 2 ) )
+                    return true
+
+                end
+            elseif dist > farEnoughToSleepDist^2 then
+                self:NextThink( CurTime() + math.Rand( 4, 8 ) )
+                return true
+
             end
         end
-        local timeToCheck
-        -- we either found someone close, or have someone close
-        if IsValid( tooClosePlayer ) and tooClosePlayer:GetPos():DistToSqr( myPos ) < farEnoughToSleepDist^2 and self.ambusher:Health() > 0 then
-            timeToCheck = self:GetAmbushDistance() / 300
-            if math.random( 0, 100 ) < self.HintSoundChance then
-                self:DoHintSound()
-
-            end
-
-        else
-            if IsValid( tooClosePlayer ) then
-                -- they just left the area! there could be another person nearby, think fast!
-                timeToCheck = self:GetAmbushDistance() / 300
-
-            else
-                -- they either disconnected, or we didn't have anyone in the first place, think slow 
-                timeToCheck = self:GetAmbushDistance() / 40
-
-            end
-            self.tooClosePlayer = nil
-
-        end
-        self:NextThink( CurTime() + timeToCheck + math.Rand( -timeToCheck / 10, timeToCheck / 10 ) )
-        return true
 
     end
+end
+
+function ENT:CampaignEnts_OnProximity()
+    self:NextThink( CurTime() )
+
 end
 
 function ENT:OnRemove()
@@ -347,7 +346,7 @@ function ENT:InitializeAmbusher()
     local ambusher = ents.Create( self.AmbusherClass )
     ambusher:SetPos( self:GetPos() )
     ambusher:SetAngles( self:GetAngles() )
-    ambusher:SetKeyValue( "spawnflags", "516" )
+    ambusher:SetKeyValue( "spawnflags", bit.bor( SF_NPC_FADE_CORPSE ) )
     ambusher:SetKeyValue( "startburrowed", "1" )
     ambusher:Spawn()
     ambusher:Activate()

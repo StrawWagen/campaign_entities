@@ -51,6 +51,14 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    4, "ShowGoalLinks",     { KeyName = "forcespawn",          Edit = { readonly = true } } )
 
     if SERVER then
+        self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
+            if not SERVER then return end
+            if not IsValid( self ) then return end
+
+            campaignents_TrackPlyProximity( self, new )
+
+        end )
+
         self:SetModelToSpawn( self.DefaultModel )
         self:SetSupplyContentClass( "item_dynamic_resupply" )
         self:SetNPCWeapon( "" )
