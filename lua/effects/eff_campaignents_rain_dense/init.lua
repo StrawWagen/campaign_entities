@@ -109,7 +109,6 @@ function EFFECT:Init( data )
     end
     emitter:Finish()
 
-
 end
 
 function EFFECT:Think()

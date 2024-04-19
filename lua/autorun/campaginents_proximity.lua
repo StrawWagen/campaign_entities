@@ -262,6 +262,6 @@ end
 
 hook.Add( "Think", "campaginents_trackplyproxmity", function()
     local old = SysTime()
-    if manage() then return true end
+    if manage() then return end
     --print( old - SysTime() )
 end )

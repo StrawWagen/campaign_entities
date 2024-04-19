@@ -34,7 +34,6 @@ ENT.TeammateSleepers = {
     "npc_zombine_prone",
     "npc_zombine_slump",
     "npc_zombine_slump_attack",
-
 }
 
 util.PrecacheModel( "models/zombie/fast_standup.mdl" )
@@ -80,6 +79,8 @@ function ENT:InitializeAmbusher()
         ambusher:SetAngles( self:GetAngles() )
 
     end )
+
+    print( ambusher:GetNPCState() )
 
     return ambusher
 

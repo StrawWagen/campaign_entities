@@ -44,11 +44,15 @@ function ENT:InitializeAmbusher()
     ambusher:Spawn()
     ambusher:Activate()
 
+    ambusher.DynamicNpcSquadsIgnore = true
+
     return ambusher
 
 end
 
 function ENT:Ambush()
+    ambusher.DynamicNpcSquadsIgnore = nil
+
     self.ambusher:Fire( "unburrow", "", 0.1 )
 
 end
