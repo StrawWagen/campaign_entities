@@ -80,8 +80,6 @@ function ENT:InitializeAmbusher()
 
     end )
 
-    print( ambusher:GetNPCState() )
-
     return ambusher
 
 end
