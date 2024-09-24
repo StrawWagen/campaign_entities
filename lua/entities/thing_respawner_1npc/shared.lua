@@ -19,7 +19,7 @@ function ENT:DoDefaultVariables()
     self:SetDropToFloor( true )
 
     self:SetNeedToLookAway( false )
-    self:SetOn( true )
+    self:SetBlockSpawn( false )
 
     self:SetMaxToSpawn( 1 )
     self:SetMinSpawnInterval( 0 )
@@ -38,12 +38,13 @@ local nextRespawnerMessage = 0
 function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextRespawnerMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
-        local MSG = "I'm actially a Thing Respawner\nMy settings are just changed so I only spawn ONE thing!"
-        campaignents_MessageOwner( self, MSG )
+    if CAMPAIGN_ENTS.EnabledAi() then
+        local MSG = "I'm actually a Thing Respawner\nMy settings are just changed so I only spawn ONE thing!"
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             MSG = "This message will not appear when duped in."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
         end )
 
         nextRespawnerMessage = CurTime() + 25

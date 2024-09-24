@@ -15,27 +15,45 @@ ENT.Model = "models/maxofs2d/cube_tool.mdl"
 ENT.Material = "phoenix_storms/cube"
 
 function ENT:SetupDataTables()
-    self:NetworkVar( "Bool",    0, "WeaponsPersistOnDeath", { KeyName = "deathpersist",         Edit = { type = "Bool" } } )
-    self:NetworkVar( "Bool",    1, "JustStripWeapons",      { KeyName = "juststripweapons",    Edit = { type = "Bool" } } )
+    local i = 1
+    self:NetworkVar( "Bool",    0, "WeaponsPersistOnDeath", { KeyName = "deathpersist",             Edit = { order = i + 1, type = "Bool" } } )
+    self:NetworkVar( "Bool",    1, "JustStripWeapons",      { KeyName = "juststripweapons",         Edit = { order = i + 1, type = "Bool" } } )
+    self:NetworkVar( "Bool",    2, "JustBlockSpawning",     { KeyName = "justblockspawning",        Edit = { order = i + 1, type = "Bool" } } )
+    self:NetworkVar( "Bool",    3, "StripAmmoOnSaveLoad",   { KeyName = "stripammoonsaveload",      Edit = { order = i + 1, type = "Bool" } } )
     if SERVER then
+        self:NetworkVarNotify( "JustStripWeapons", function( _, _, _, new )
+            if new and self:GetJustBlockSpawning() then
+                self:SetJustBlockSpawning( false )
+
+            end
+        end )
+        self:NetworkVarNotify( "JustBlockSpawning", function( _, _, _, new )
+            if new and self:GetJustStripWeapons() then
+                self:SetJustStripWeapons( false )
+
+            end
+        end )
+
         self:SetWeaponsPersistOnDeath( true )
         self:SetJustStripWeapons( false )
+        self:SetJustBlockSpawning( false )
+        self:SetStripAmmoOnSaveLoad( true )
+
     end
 end
 
 function ENT:Initialize()
     if SERVER then
-        self.overRidden = nil
-        self.Enabled = nil
-        self.OldEnabled = nil
         self:SetModel( self.Model )
-        self:SetNoDraw( false )
         self:DrawShadow( false )
         self:SetMoveType( MOVETYPE_VPHYSICS )
         self:PhysicsInit( SOLID_VPHYSICS )
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
 
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             self:BlockerSetup()
             self:NextThink( CurTime() + 0.05 )
 
@@ -48,7 +66,7 @@ local STRAW_WeaponBlocker
 
 local function ActiveBlocker()
     if not IsValid( STRAW_WeaponBlocker ) then return end
-    if not campaignents_EnabledAi() then return end
+    if not CAMPAIGN_ENTS.EnabledAi() then return end
     return true
 
 end
@@ -61,146 +79,207 @@ local function BlockerStopsSpawning()
 
 end
 
+function ENT:BlockerStripsWeapons()
+    if self.GetJustStripWeapons and self:GetJustStripWeapons() then return true end
+    if self.GetJustBlockSpawning and self:GetJustBlockSpawning() then return end
+    return true
+
+end
+
 function ENT:OnDuplicated()
     self.duplicatedIn = true
+    local saveLoaderOverride = CAMPAIGN_ENTS.weaponSpawnBlockerDontStrip or 0
+    if not CAMPAIGN_ENTS.IsFreeMode() and self:GetStripAmmoOnSaveLoad() and self:BlockerStripsWeapons() and saveLoaderOverride < CurTime() then
+        for _, ply in player.Iterator() do
+            ply:RemoveAllAmmo()
 
+        end
+    end
 end
 
 local nextWeaponSpawnBlockerMessage = 0
 function ENT:BlockerSetup()
-    self:EnsureOnlyOneExists()
+    STRAW_WeaponBlocker = CAMPAIGN_ENTS.EnsureOnlyOneExists( self )
+
     if self.duplicatedIn then return end
     if nextWeaponSpawnBlockerMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "Weapon spawn blocker: Disable AI to enable debug mode \nThis message will not appear when duped in."
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         nextWeaponSpawnBlockerMessage = CurTime() + 25
 
-    elseif not campaignents_EnabledAi() then
+    elseif not CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "Weapon spawn blocker: Check my context menu option!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         nextWeaponSpawnBlockerMessage = CurTime() + 25
 
     end
 end
 
-function ENT:EnsureOnlyOneExists()
-    if IsValid( STRAW_WeaponBlocker ) and STRAW_WeaponBlocker ~= self then
-        STRAW_WeaponBlocker.overRidden = true
-        SafeRemoveEntity( STRAW_WeaponBlocker )
-
-    end
-    STRAW_WeaponBlocker = self
+local function stripPlysWeps( ply )
+    ply:StripWeapons()
 
 end
 
--- save "building" loadout, eg, physgun, toolgun
-function ENT:StoreOldLoadout( ply )
-    ply.campaignEnts_OldLoadout = {}
+local function getLoadouts( ply )
+    local loadouts = ply.campaignents_WepBlockLoadouts
+    if loadouts then return loadouts end
+
+    ply.campaignents_WepBlockLoadouts = {}
+    return ply.campaignents_WepBlockLoadouts
+
+end
+
+local function newLoadout()
+    return { wepsIndex = {}, weps = {}, active = nil }
+
+end
+
+
+function ENT:IsLoadout( ply, name )
+    local loadouts = getLoadouts( ply )
+    if loadouts[name] then return true end
+    return false
+
+end
+
+function ENT:WipeLoadout( ply, name )
+    local loadouts = getLoadouts( ply )
+    loadouts[name] = nil
+
+end
+
+function ENT:StoreLoadout( ply, name )
+    local loadouts = getLoadouts( ply )
+    local curr = loadouts[name]
+    if not curr then
+        curr = newLoadout()
+        loadouts[name] = curr
+
+    end
+
     for _, weap in ipairs( ply:GetWeapons() ) do
-        table.insert( ply.campaignEnts_OldLoadout, weap:GetClass() )
+        table.insert( curr.weps, weap:GetClass() )
 
     end
-    if not IsValid( ply:GetActiveWeapon() ) then return end
-    ply.campaignEnts_OldActiveWeapon = ply:GetActiveWeapon():GetClass()
+
+    if IsValid( ply:GetActiveWeapon() ) then
+        curr.active = ply:GetActiveWeapon():GetClass()
+
+    end
 
 end
 
--- restore "building" loadout, eg physgun, toolgun
-function ENT:RestoreOldLoadout( ply )
-    if ply.campaignEnts_OldLoadout then
-        ply:StripWeapons()
-        self:GivePlyWeapons( ply, ply.campaignEnts_OldLoadout, true )
+function ENT:AddToLoadout( ply, name, class )
+    local loadouts = getLoadouts( ply )
+    local curr = loadouts[name]
+    if not curr then
+        curr = newLoadout()
+        loadouts[name] = curr
 
-        timer.Simple( 0, function()
-            if not IsValid( ply ) then return end
-            if not ply.campaignEnts_OldActiveWeapon then return end
-            ply:SelectWeapon( ply.campaignEnts_OldActiveWeapon )
-            ply.campaignEnts_OldActiveWeapon = nil
-
-        end )
     end
-    ply.campaignEnts_WeapBlockerEnabled = nil
-    ply.campaignEnts_OldLoadout = nil
+
+    if curr.wepsIndex[class] then return end
+
+    curr.wepsIndex[class] = true
+    table.insert( curr.weps, class )
 
 end
 
--- give tbl of weap classes
-function ENT:GivePlyWeapons( ply, weaps, blockAmmo )
-    if not istable( weaps ) then return end
-    if table.Count( weaps ) <= 0 then return end
-    for _, wepClass in ipairs( weaps ) do
-        ply:Give( wepClass, blockAmmo )
+function ENT:RestoreLoadout( ply, name )
+    local loadouts = getLoadouts( ply )
+    local curr = loadouts[name]
+    ply.campaignents_LastSetLoadout = name
 
+    if not curr then return end
+
+    if table.Count( curr.weps ) <= 0 then return end
+    for _, wepClass in ipairs( curr.weps ) do
+        local given = ply:Give( wepClass, true )
+        if given and given.GetMaxClip1 then
+            given:SetClip1( given:GetMaxClip1() )
+
+        end
     end
+
+    if not curr.active then return end
+    local active = curr.active
+    timer.Simple( 0, function()
+        if not IsValid( ply ) then return end
+        ply:SelectWeapon( active )
+
+    end )
 end
 
-function ENT:ManagePlysWeapons( ply )
+function ENT:ManagePlysWeapons( ply, isActive )
     if not IsValid( ply ) then return end
     if not ply:Alive() then return end
-    local inNoclip = ply:CampaignEnts_IsInNoclip()
-    local enabled = self.Enabled and not inNoclip and not campaignents_IsFreeMode()
 
-    if enabled == nil then enabled = false end
+    local inNoclip = ply:campaignents_IsInNoclip()
+    local enabled = isActive and not ( inNoclip or CAMPAIGN_ENTS.IsFreeMode() )
+
+    -- make sure its not nil
+    enabled = enabled or false
 
     if self.GetJustStripWeapons and self:GetJustStripWeapons() then
-        if enabled == true and ply.campaignEnts_WeaponStripper ~= self then
-            if not ply.campaignEnts_OldLoadout then
-                self:StoreOldLoadout( ply )
+        -- take weps away
+        if enabled == true and ply.campaignents_LastSetLoadout ~= "playing" then
+            -- store the default weapons
+            self:StoreLoadout( ply, "building" )
+            stripPlysWeps( ply )
 
-            end
-            ply.campaignEnts_WeaponStripper = self
-            ply:StripWeapons()
+            self:RestoreLoadout( ply, "playing" )
 
-        elseif enabled ~= true then
-            self:RestoreOldLoadout( ply )
+        -- they noclipped, give back old weapons
+        elseif enabled == false and self:IsLoadout( ply, "building" ) and ply.campaignents_LastSetLoadout ~= "building" then
+            self:StoreLoadout( ply, "playing" )
+            stripPlysWeps( ply )
+
+            self:RestoreLoadout( ply, "building" )
+            self:WipeLoadout( ply, "building" )
 
         end
         return
 
-    end
-
-    local plysWeapStatus = ply.campaignEnts_WeapBlockerEnabled
-    if enabled ~= plysWeapStatus then
-        ply.campaignEnts_WeapBlockerHandling = true -- HACK
-        if enabled == true then
-            -- setup this ply!
-            if not ply.campaignEnts_OldLoadout then
-                self:StoreOldLoadout( ply )
-                ply:StripWeapons()
-
-            end
-            -- they died
-            if ply.campaignEnts_NeedsLoadoutRefresh then
-                ply:StripWeapons()
-                if self:GetWeaponsPersistOnDeath() then
-                    self:GivePlyWeapons( ply, ply.campaignEnts_BlockerPickedUpWeaps, false )
-
-                end
-                ply.campaignEnts_NeedsLoadoutRefresh = nil
-
-            -- they exited noclip
-            else
-                ply:StripWeapons()
-                self:GivePlyWeapons( ply, ply.campaignEnts_BlockerPickedUpWeaps, false )
-
-            end
-        elseif enabled ~= true then
-            self:RestoreOldLoadout( ply )
-
-        end
-        ply.campaignEnts_WeapBlockerHandling = nil
-        ply.campaignEnts_WeapBlockerEnabled = enabled
+    elseif self:GetJustBlockSpawning() then
+        return
 
     end
+
+    ply.campaignents_WeapBlockerHandling = true -- HACK
+    if enabled == true and ply.campaignents_LastSetLoadout ~= "playing" then
+        self:StoreLoadout( ply, "building" )
+        stripPlysWeps( ply )
+        self:RestoreLoadout( ply, "playing" )
+
+    elseif enabled == false and ply.campaignents_LastSetLoadout ~= "building" then
+        self:RestoreLoadout( ply, "building" )
+        self:WipeLoadout( ply, "building" )
+
+    end
+    ply.campaignents_WeapBlockerHandling = nil
+
 end
 
+hook.Add( "campaignents_OnPlayerEnterGenericNoclip", "weapon_spawn_blocker", function( ply )
+    local isActive = ActiveBlocker()
+    if not isActive then return end
+    STRAW_WeaponBlocker:ManagePlysWeapons( ply, isActive )
+
+end )
+
+hook.Add( "campaignents_OnPlayerExitGenericNoclip", "weapon_spawn_blocker", function( ply )
+    local isActive = ActiveBlocker()
+    if not isActive then return end
+    STRAW_WeaponBlocker:ManagePlysWeapons( ply, isActive )
+
+end )
 
 function ENT:Think()
-    self.Enabled = ActiveBlocker()
+    local isActive = ActiveBlocker()
     local plys = player.GetAll()
     for _, ply in ipairs( plys ) do
-        self:ManagePlysWeapons( ply )
+        self:ManagePlysWeapons( ply, isActive )
 
     end
     self:NextThink( CurTime() + 1 )
@@ -209,12 +288,17 @@ function ENT:Think()
 end
 
 function ENT:OnRemove()
-    if self.overRidden then return end
+    if self.campaignents_Overriden then return end
     for _, ply in ipairs( player.GetAll() ) do
-        self:RestoreOldLoadout( ply )
+        if ply.campaignents_LastSetLoadout ~= "building" then
+            self:RestoreLoadout( ply, "building" )
+
+        end
         --print( ply )
-        ply.campaignEnts_BlockerHasPickedUpWeaps = nil
-        ply.campaignEnts_BlockerPickedUpWeaps = nil
+        ply.campaignents_BlockerHasPickedUpWeaps = nil
+        ply.campaignents_BlockerPickedUpWeaps = nil
+        ply.campaignents_LastSetLoadout = nil
+        ply.campaignents_WepBlockLoadouts = nil
 
     end
 end
@@ -222,10 +306,11 @@ end
 local function swepGiveThink( ply, _, _ )
     if not ActiveBlocker() then return nil end
     if not BlockerStopsSpawning() then return nil end
-    if ply:CampaignEnts_IsInNoclip() then return nil end
+    if ply:campaignents_IsInNoclip() then return nil end
     if ( ply.nextDenySound or 0 ) > CurTime() then return false end
     ply.nextDenySound = CurTime() + engine.TickInterval()
     -- AAAAAAAAAA
+    -- sorry just scared myself with this terrible code
     ply:SendLua( "LocalPlayer():EmitSound( 'common/wpn_denyselect.wav' )" )
     return false
 
@@ -235,22 +320,22 @@ hook.Add( "PlayerGiveSWEP", "weapon_blocker_giveswep", swepGiveThink )
 
 hook.Add( "PlayerSpawnSWEP", "weapon_blocker_spawnswep", swepGiveThink )
 
-hook.Add( "PlayerDeath", "weapon_blocker_plydeath", function( ply )
+hook.Add( "PlayerDeath", "weapon_blocker_died", function( died )
     if not ActiveBlocker() then return end
-    if not BlockerStopsSpawning() then return end
-    ply.campaignEnts_WeapBlockerEnabled = nil
-    ply.campaignEnts_WeapBlockerHandlingRespawn = true
+    if not STRAW_WeaponBlocker:GetWeaponsPersistOnDeath() then
+        STRAW_WeaponBlocker:WipeLoadout( died, "playing" )
 
+    end
+    if not BlockerStopsSpawning() then return end
 end )
 
 hook.Add( "PlayerSpawn", "weapon_blocker_plyrespawn", function( ply, _ )
     if not ActiveBlocker() then return end
+    ply.campaignents_LastSetLoadout = "building"
     if not BlockerStopsSpawning() then return end
-    ply.campaignEnts_NeedsLoadoutRefresh = true
-    timer.Simple( 0.1, function()
+    timer.Simple( 0.05, function()
         if not IsValid( ply ) then return end
         if not ply:Alive() then return end
-        ply.campaignEnts_WeapBlockerHandlingRespawn = nil
         STRAW_WeaponBlocker:NextThink( CurTime() )
 
     end )
@@ -259,20 +344,13 @@ end )
 
 hook.Add( "PlayerCanPickupWeapon", "weapon_blocker_validpickupweapon", function( ply, weap )
     if not ActiveBlocker() then return end
-    if not BlockerStopsSpawning() then return end
     if not IsValid( ply ) then return end
 
-    if ply.campaignEnts_WeapBlockerHandling then return end -- within ManagePlysWeapons
-    if ply.campaignEnts_WeapBlockerHandlingRespawn then return end
-
-    if not ply.campaignEnts_BlockerHasPickedUpWeaps then ply.campaignEnts_BlockerHasPickedUpWeaps = {} end
-    if not ply.campaignEnts_BlockerPickedUpWeaps then ply.campaignEnts_BlockerPickedUpWeaps = {} end
+    if STRAW_WeaponBlocker:GetJustBlockSpawning() then return end
+    if ply.campaignents_WeapBlockerHandling then return end -- within ManagePlysWeapons
 
     local class = weap:GetClass()
-    if not ply.campaignEnts_BlockerHasPickedUpWeaps[class] then
-        --print( "pickup " .. class )
-        ply.campaignEnts_BlockerHasPickedUpWeaps[class] = true
-        table.insert( ply.campaignEnts_BlockerPickedUpWeaps, class )
 
-    end
+    STRAW_WeaponBlocker:AddToLoadout( ply, ply.campaignents_LastSetLoadout, class )
+
 end )

@@ -11,10 +11,6 @@ ENT.Spawnable    = false
 ENT.AdminOnly    = false
 ENT.Model = "models/maxofs2d/button_04.mdl"
 
-if not istable( noclipBestowers ) then
-    noclipBestowers = {}
-end
-
 function ENT:SetupDataTables()
     self:NetworkVar( "Bool", 0, "On" )
 
@@ -35,6 +31,8 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
         self:SetUseType( SIMPLE_USE )
 
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         self:SetupSessionVars()
 
         self:BestowerSetup()
@@ -49,24 +47,12 @@ function ENT:OnDuplicated()
 end
 
 function ENT:BestowerSetup()
-    self:EnsureOnlyOneExists()
 end
 
 function ENT:CanBePressedBy( ply )
     if not IsValid( ply ) then return end
     if not ply:IsPlayer() then return end
     return true
-
-end
-
-function ENT:EnsureOnlyOneExists()
-    local otherBestower = noclipBestowers[self:GetClass()]
-    if IsValid( otherBestower ) and otherBestower ~= self then
-        otherBestower.overRidden = true
-        SafeRemoveEntity( otherBestower )
-
-    end
-    noclipBestowers[self:GetClass()] = self
 
 end
 

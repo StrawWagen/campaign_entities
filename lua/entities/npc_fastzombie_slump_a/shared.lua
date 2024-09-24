@@ -12,6 +12,7 @@ ENT.MyClass = "npc_fastzombie_slump_a"
 ENT.ModelToPrecache = "models/Zombie/Fast.mdl"
 ENT.AmbusherClass = "npc_fastzombie"
 
+ENT.SnapBehind = nil
 ENT.Slump = "slump_a"
 ENT.RiseStyle = "slumprise_a"
 
@@ -40,6 +41,33 @@ util.PrecacheModel( "models/zombie/fast_standup.mdl" )
 
 local doneStuff = {}
 
+local maxs = Vector( 21, 21, 2 )
+local upOffset = Vector( 0, 0, 25 )
+local backDown = -upOffset * 0.75
+
+function ENT:SnapToWallBehind( ambusher )
+    if not self.SnapBehind then return end
+
+    local forward = ambusher:GetForward()
+    local checkStart = ambusher:GetPos() + forward * 25 + upOffset
+
+    local trStruc = {
+        start = checkStart,
+        endpos = checkStart + -forward * 50,
+        mask = MASK_SHOT,
+        filter = { self, ambusher },
+        mins = -maxs,
+        maxs = maxs,
+
+    }
+    local result = util.TraceHull( trStruc )
+
+    if not result.Hit then return end
+
+    ambusher:SetPos( result.HitPos + backDown )
+
+end
+
 function ENT:InitializeAmbusher()
     doneStuff[self:GetCreationID()] = true
 
@@ -61,22 +89,35 @@ function ENT:InitializeAmbusher()
 
     end
 
-    self.waking_sequence = ents.Create( "scripted_sequence" )
-    self.waking_sequence:SetName( wakeSeqName )
-    self.waking_sequence:SetKeyValue( "spawnflags", "624" )
-    self.waking_sequence:SetKeyValue( "m_fMoveTo", "4" ) -- tp to start of sequence
-    self.waking_sequence:SetKeyValue( "m_iszEntity", fastzombie_name )
-    self.waking_sequence:SetKeyValue( "m_iszIdle", self.Slump )
-    self.waking_sequence:SetKeyValue( "m_iszPlay", riseStyle )
+    local waking_sequence = ents.Create( "scripted_sequence" )
+    if not IsValid( waking_sequence ) then return end
+    self.waking_sequence = waking_sequence
+    waking_sequence:SetName( wakeSeqName )
+    waking_sequence:SetKeyValue( "spawnflags", "624" )
+    waking_sequence:SetKeyValue( "m_fMoveTo", "4" ) -- tp to start of sequence
+    waking_sequence:SetKeyValue( "m_iszEntity", fastzombie_name )
+    waking_sequence:SetKeyValue( "m_iszIdle", self.Slump )
+    waking_sequence:SetKeyValue( "m_iszPlay", riseStyle )
 
-    self.waking_sequence:SetPos( self:GetPos() )
-    self.waking_sequence:Spawn()
-    self.waking_sequence:Activate()
-    self.waking_sequence:SetParent( ambusher )
+    waking_sequence:SetPos( self:GetPos() )
+    waking_sequence:Spawn()
+    waking_sequence:Activate()
+    waking_sequence:SetParent( ambusher )
 
     timer.Simple( 0, function()
-        self.waking_sequence:SetAngles( self:GetAngles() )
+        if not IsValid( self ) then return end
+        if not IsValid( waking_sequence ) then return end
+        if not IsValid( ambusher ) then return end
+        waking_sequence:SetAngles( self:GetAngles() )
         ambusher:SetAngles( self:GetAngles() )
+
+    end )
+
+    -- do this after it falls down to the ground
+    timer.Simple( 0.05, function()
+        if not IsValid( self ) then return end
+        if not IsValid( ambusher ) then return end
+        self:SnapToWallBehind( ambusher )
 
     end )
 
@@ -84,7 +125,7 @@ function ENT:InitializeAmbusher()
 
 end
 
-hook.Add( "EntityTakeDamage", "sleepingnpcs_wakeupon_dmg", function( damaged, damageInfo )
+hook.Add( "EntityTakeDamage", "sleepingnpcs_wakeupon_dmg", function( damaged, _ )
     if not IsValid( damaged.sleepingNpcs_SourceEnt ) then return end
     damaged.sleepingNpcs_SourceEnt:NextThink( CurTime() + 0.05 )
     damaged.sleepingNpcs_SourceEnt.forcedAmbush = CurTime()

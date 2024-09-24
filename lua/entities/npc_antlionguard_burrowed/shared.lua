@@ -30,6 +30,7 @@ function ENT:InitializeAmbusher()
 end
 
 function ENT:Ambush()
+
     self.ambusher.DynamicNpcSquadsIgnore = true
 
     self.ambusher:Fire( "unburrow", "", 0.1 )

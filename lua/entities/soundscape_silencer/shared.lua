@@ -29,7 +29,10 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
         self:SetMaterial( self.Material )
 
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             self:BlockerSetup()
 
         end )
@@ -51,6 +54,7 @@ function ENT:Silence()
     end
 
     timer.Simple( 0.1, function()
+        if not IsValid( self ) then return end
         net.Start( "ambientdeafener_postdeafen" )
         net.Broadcast()
 
@@ -74,7 +78,7 @@ function ENT:BlockerSetup()
     campaignents_nextAmbientDeafenerMessage = CurTime() + 30
 
     local MSG = "Soundscape Silencer: Your ears should be much clearer!"
-    campaignents_MessageOwner( self, MSG )
+    CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
 end
 

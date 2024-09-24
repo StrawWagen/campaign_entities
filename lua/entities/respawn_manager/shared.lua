@@ -14,6 +14,8 @@ ENT.Editable = true
 ENT.Model = "models/props_combine/breenbust.mdl"
 ENT.Material = "editor/orange"
 
+local STRAW_RespawnManager
+
 local function ActiveRespawnManager()
     if not IsValid( STRAW_RespawnManager ) then return end
     return true
@@ -54,21 +56,14 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
         self:SetMaterial( self.Material )
 
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
             self:BlockerSetup()
 
         end )
     end
-end
-
-function ENT:EnsureOnlyOneExists()
-    if IsValid( STRAW_RespawnManager ) and STRAW_RespawnManager ~= self then
-        SafeRemoveEntity( STRAW_RespawnManager )
-
-    end
-    STRAW_RespawnManager = self
-
 end
 
 function ENT:SavePlyRespawnPos( ply )
@@ -85,7 +80,8 @@ end
 
 local nextRespawnMessage = 0
 function ENT:BlockerSetup()
-    self:EnsureOnlyOneExists()
+    STRAW_RespawnManager = CAMPAIGN_ENTS.EnsureOnlyOneExists( self )
+
     timer.Simple( 0.1, function()
         if not IsValid( self ) then return end
         for _, currPly in ipairs( player.GetAll() ) do
@@ -107,9 +103,9 @@ function ENT:BlockerSetup()
     if self.duplicatedIn then return end
     if nextRespawnMessage > CurTime() then return end
 
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "Checkpoint, Dynamic: I save respawn positions depending on my context menu options!\nWhen people respawn, I put them at their last respawn position!\nThis message will not appear when duped in."
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         nextRespawnMessage = CurTime() + 25
 
     end
@@ -188,7 +184,11 @@ function ENT:SmartRespawnThink( ply )
     if not IsValid( ply ) then return end
 
     local plyPos = ply:GetPos()
-    local distToIdealSpawnPos = plyPos:Distance( ply.respawnManagerRespawnPos )
+    -- 2d distance, so player can fall
+    local subtractionProduct = plyPos - ply.respawnManagerRespawnPos
+    subtractionProduct.z = 0
+
+    local distToIdealSpawnPos = subtractionProduct:Length()
     -- our pos was set!
     if distToIdealSpawnPos < 100 and ply.respawnManagerNeedsStatsSet then
         ply.respawnManagerNeedsStatsSet = nil
@@ -218,6 +218,7 @@ function ENT:SmartRespawnThink( ply )
     if ply.respawnManagerTimeout < CurTime() then self:SmartRespawnBail( ply ) return end -- not able to teleport ply
     if plyPos:Distance( vecZero ) < 100 then self:SmartRespawnBail( ply ) return end -- malformed spawnpos
 
+    if ply:GetMoveType() == MOVETYPE_NOCLIP then return true end -- they noclipped
     if IsValid( ply.campaignents_CurrCheckpoint ) then return true end -- keep stats but bail
     if distToIdealSpawnPos >= 100 then
         ply:SetPos( ply.respawnManagerRespawnPos )

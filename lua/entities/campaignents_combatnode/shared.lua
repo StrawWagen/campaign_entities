@@ -10,14 +10,18 @@ ENT.Purpose     = "Makes NPCs with enemies, that aren't moving, path to it."
 ENT.Spawnable   = true
 ENT.AdminOnly   = true
 
-ENT.Editable    = true
+if not SERVER then return end
+
 ENT.DefaultModel = "models/props_phx/games/chess/white_dama.mdl"
 
-local function PosCanSee( startPos, endPos, filter, mask )
+local shootinMask = MASK_SHOT
+local movementGroup = COLLISION_GROUP_NPC
+
+local function PosCanSee( startPos, endPos, filter )
     if not startPos then return end
     if not endPos then return end
 
-    mask = mask or MASK_SHOT
+    mask = mask or shootinMask
 
     local trData = {
         start = startPos,
@@ -27,6 +31,29 @@ local function PosCanSee( startPos, endPos, filter, mask )
     }
     local trace = util.TraceLine( trData )
     return not trace.Hit, trace
+
+end
+
+local function IsntBlocked( startPos, endPos, filter )
+    if not startPos then return end
+    if not endPos then return end
+
+    local trData = {
+        start = startPos,
+        endpos = endPos,
+        collisiongroup = movementGroup,
+        filter = filter
+    }
+    local trace = util.TraceLine( trData )
+    return not trace.Hit, trace
+
+end
+
+local function CanSeeOrHitNpc( startPos, endPos, filter, mask )
+    local noHit, trace = PosCanSee( startPos, endPos, filter, mask )
+    if noHit then return true end
+    if IsValid( trace.Entity ) and trace.Entity:IsNPC() then return true end
+    return false
 
 end
 
@@ -50,18 +77,18 @@ function ENT:Initialize()
         self:SetMaterial( defaultMat )
 
         self:SetupSessionVars()
-        campaignEnts_EasyFreeze( self )
 
-        campaignents_doFadeDistance( self, 3000 )
+        CAMPAIGN_ENTS.doFadeDistance( self, 3000 )
+        CAMPAIGN_ENTS.StartUglyHiding( self )
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
+        self.PersonalNextTimes = {}
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
             self:SelfSetup()
 
         end )
-    else
-        self.ShouldDraw = nil
-
     end
 end
 
@@ -70,12 +97,13 @@ function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextMessage > CurTime() then return end
 
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "I give NPCS in combat, somewhere to move to, even if there's no AI nodes!\nPlace me behind cover, in the open, npcs will use me with intent!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             MSG = "Spawn a big plate, put it high up, and spam copies of me on it, to see a demo!\nThis will not appear when duped in."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         end )
 
@@ -90,23 +118,23 @@ function ENT:OnDuplicated()
 
 end
 
-if CLIENT then
-    function ENT:Draw()
-        if campaignents_IsEditing() or not campaignents_EnabledAi() then
-            self:DrawModel()
+local debugging = CreateConVar( "campaignents_debug_combatnode", "0", FCVAR_NONE, "Enable developer 1 info for combat nodes" )
 
-        end
-    end
-end
+local debuggingBool = debugging:GetBool()
+cvars.AddChangeCallback( "campaignents_debug_combatnode", function( _, _, new )
+    debuggingBool = tobool( new )
 
-if not SERVER then return end
+end, "campaignents_detectchange" )
 
 local vector_up = Vector( 0, 0, 1 )
-local red = Color( 255, 0, 0 )
-local white = Color( 255, 255, 255 )
+
 local blockedCheckOffset = vector_up * 25
 local blockedCheckMaxs = Vector( 10, 10, 2 )
 local blockedCheckMins = Vector( -10, -10, 1 )
+
+local red = Color( 255, 0, 0 )
+local green = Color( 0, 255, 0 )
+local white = Color( 255, 255, 255 )
 
 local myClass = "campaignents_combatnode"
 local shareFindResultsDist = 200
@@ -116,42 +144,58 @@ local findAllDist = pathDistNoAiNodes + shareFindResultsDist
 pathDistNoAiNodes = pathDistNoAiNodes^2
 shareFindResultsDist = shareFindResultsDist^2
 
+local entMeta = FindMetaTable( "Entity" )
+local GetClass = entMeta.GetClass
+local game_GetWorld = game.GetWorld
+
+local npcMeta = FindMetaTable( "NPC" )
+
 function ENT:Think()
     if not SERVER then return end
 
-    local myPos = self:GetPos()
-    local nextFindNearby = self.nextFindNearby or 0
-    local stuffNearby = self.stuffNearby
-    if not util.IsInWorld( myPos ) then self:OnBlocked() return end
+    local myTbl = self:GetTable()
+
+    local myPos = entMeta.GetPos( self )
+    local nextFindNearby = myTbl.nextFindNearby or 0
+    local stuffNearby = myTbl.stuffNearby
+    if not game_GetWorld( myPos ) then
+        myTbl.OnBlocked( self, game_GetWorld() )
+        return true
+
+    end
 
     local trStruc = {
         start = myPos + blockedCheckOffset,
         endpos = myPos,
         filter = self,
-        mask = MASK_SOLID,
+        collisiongroup = movementGroup,
         maxs = blockedCheckMaxs,
         mins = blockedCheckMins,
 
     }
     local blockedCheck = util.TraceHull( trStruc )
-    if blockedCheck.Hit or blockedCheck.StartSolid then self:OnBlocked() return end
+    if blockedCheck.Hit or blockedCheck.StartSolid then
+        myTbl.OnBlocked( self, blockedCheck.Entity )
+        return true
 
-    if self.fixColor then
-        self.fixColor = nil
-        self:SetColor( white )
-        self:SetMaterial( defaultMat )
+    end
+
+    if myTbl.fixColor then
+        myTbl.fixColor = nil
+        entMeta.SetColor( self, white )
+        entMeta.SetMaterial( self, defaultMat )
 
     end
 
     if not stuffNearby or nextFindNearby < CurTime() then
-        self.nextFindNearby = CurTime() + math.Rand( 2, 4 )
-        stuffNearby = ents.FindInSphere( self:GetPos(), findAllDist )
-        self.stuffNearby = stuffNearby
+        myTbl.nextFindNearby = CurTime() + math.Rand( 2, 4 )
+        stuffNearby = ents.FindInSphere( myPos, findAllDist )
+        myTbl.stuffNearby = stuffNearby
 
         -- save on FindInSpheres by sharing our results with neighbors
         for _, potentialNode in ipairs( stuffNearby ) do
-            if IsValid( potentialNode ) and potentialNode:GetClass() == myClass and potentialNode:GetPos():DistToSqr( myPos ) < shareFindResultsDist then
-                potentialNode.stuffNearby = self.stuffNearby
+            if IsValid( potentialNode ) and GetClass( potentialNode ) == myClass and entMeta.GetPos( potentialNode ):DistToSqr( myPos ) < shareFindResultsDist then
+                potentialNode.stuffNearby = myTbl.stuffNearby
                 potentialNode.nextFindNearby = CurTime() + math.Rand( 2, 4 )
 
             end
@@ -161,40 +205,86 @@ function ENT:Think()
     local didSomething
     local isFighting
     local operatedOnNpc
+    local nextTimes = myTbl.PersonalNextTimes
+    local cur = CurTime()
 
     for _, currThing in ipairs( stuffNearby ) do
         -- make sure its a normal npc that was constructed by someone who is sane.
-        local normalNpc = IsValid( currThing ) and currThing:IsNPC() and currThing.SetSchedule and currThing.GetMoveVelocity and currThing:GetPos():DistToSqr( myPos ) < pathDistNoAiNodes
-        if normalNpc then
-            local result = self:ManageNPC( currThing )
-            didSomething = didSomething or result
-            isFighting = isFighting or ( currThing.GetEnemy and IsValid( currThing:GetEnemy() ) )
-            operatedOnNpc = true
+        if IsValid( currThing ) then
+            local normalNpc = currThing.campaignents_combatNodeNormalNpc
+            if normalNpc == nil then
+                normalNpc = currThing:IsNPC() and currThing.SetSchedule and currThing.GetMoveVelocity
+                currThing.campaignents_combatNodeNormalNpc = normalNpc
 
+            end
+            if normalNpc then
+                local nextTime = nextTimes[currThing]
+
+                if currThing:GetPos():DistToSqr( myPos ) < pathDistNoAiNodes and ( not nextTime or nextTime < cur ) then
+                    local result = self:ManageNPC( currThing )
+                    didSomething = didSomething or result
+                    isFighting = isFighting or ( currThing.GetEnemy and IsValid( currThing:GetEnemy() ) )
+                    operatedOnNpc = true
+
+                end
+            end
         end
     end
     -- op tem is ation
     if not operatedOnNpc then
-        self:NextThink( CurTime() + math.Rand( 6, 12 ) )
+        entMeta.NextThink( self, CurTime() + math.Rand( 8, 16 ) )
         return true
 
     end
     if not isFighting then
-        self:NextThink( CurTime() + math.Rand( 3, 6 ) )
+        entMeta.NextThink( self, CurTime() + math.Rand( 4, 8 ) )
         return true
 
     end
     if not didSomething then
-        self:NextThink( CurTime() + math.Rand( 0.25, 1 ) )
+        entMeta.NextThink( self, CurTime() + math.Rand( 0.25, 1.5 ) )
         return true
 
     end
+
+    entMeta.NextThink( self, CurTime() + math.Rand( 0.2, 0.4 ) )
+    return true
+
 end
 
-function ENT:OnBlocked()
+function ENT:OnBlocked( blocker )
     self:SetColor( red )
     self:SetMaterial( blockedMat )
     self.fixColor = true
+    local blockTime = 10
+    if blocker and blocker:IsWorld() then
+        blockTime = 5
+
+    elseif blocker then
+        local obj = blocker:GetPhysicsObject()
+        if blocker:IsNPC() or blocker:IsPlayer() or ( IsValid( obj ) and obj:IsMotionEnabled() ) then
+            blockTime = 1
+
+        end
+    end
+    self:NextThink( CurTime() + math.Rand( blockTime * 0.5, blockTime * 1.5 ) )
+
+end
+
+local attackingSchedules = {
+    [SCHED_RELOAD] = true,
+    [SCHED_HIDE_AND_RELOAD] = true,
+    [SCHED_RANGE_ATTACK1] = true,
+    [SCHED_RANGE_ATTACK2] = true,
+    [SCHED_MELEE_ATTACK1] = true,
+    [SCHED_MELEE_ATTACK2] = true,
+    [SCHED_SPECIAL_ATTACK1] = true,
+    [SCHED_SPECIAL_ATTACK2] = true,
+
+}
+
+local function isAttacking( npcsSched )
+    return attackingSchedules[npcsSched]
 
 end
 
@@ -226,33 +316,51 @@ local COND_LOW_AMMO = COND.LOW_PRIMARY_AMMO
 local COND_NO_AMMO = COND.NO_PRIMARY_AMMO
 
 function ENT:ManageNPC( npc )
-    local busy = ( npc.campaignents_NextMove or 0 ) > CurTime()
+    local npcsTbl = npc:GetTable()
+    local busy = ( npcsTbl.campaignents_NextMove or 0 ) > CurTime()
     if busy then return end
-    busy = npc:GetMoveVelocity():LengthSqr() > busySpeed and npc:GetPathTimeToGoal() > 0.25
+    busy = npcMeta.GetMoveVelocity( npc ):LengthSqr() > busySpeed and npcMeta.GetPathTimeToGoal( npc ) > 0.25
     if busy then return end
-    busy = npc.GetNPCState and npc:GetNPCState() == NPC_STATE_SCRIPT -- npc mannable emplacement/sleeping enemies patch
+    busy = npcsTbl.GetNPCState and npcMeta.GetNPCState( NPC ) == NPC_STATE_SCRIPT -- npc mannable emplacement/sleeping enemies patch
     if busy then return end
 
     -- this is a COMBAT node!
-    local npcsEnemy = npc:GetEnemy()
+    local npcsEnemy = npcMeta.GetEnemy( npc )
     if not IsValid( npcsEnemy ) then return end
 
 
-    local enemsPos = npcsEnemy:GetPos()
-    local npcsEyePos = npc:EyePos()
-    local enemysEyePos = npcsEnemy:EyePos()
+    local npcsEyePos = entMeta.EyePos( npc )
+    local enemysEyePos = entMeta.EyePos( npcsEnemy )
+    local distToEnemySqr = npcsEyePos:DistToSqr( enemysEyePos )
 
-    local noAmmo = npc:HasCondition( COND_NO_AMMO ) or npc:HasCondition( COND_LOW_AMMO )
-    local canShoot = PosCanSee( npcsEyePos, enemysEyePos, { npc, npcsEnemy } )
-    local nextMove = npc.campaignents_NextMoveWhenSeeing or 0
-    if ( nextMove > CurTime() ) and ( canShoot and not noAmmo ) then return end
+    local noAmmo = npcMeta.HasCondition( npc, COND_NO_AMMO ) or npcMeta.HasCondition( npc, COND_LOW_AMMO )
+    local sightClearOrBlockedByNpc = CanSeeOrHitNpc( npcsEyePos, enemysEyePos, { npc, npcsEnemy } )
+    local nextMove = npcsTbl.campaignents_NextMoveWhenSeeing or 0
+    local needsToTakeCover
+    if nextMove > CurTime() then
+        -- only wait if we're fine with where we are
+        if not ( sightClearOrBlockedByNpc and noAmmo and distToEnemySqr < 500^2 ) then
+            return
 
-    local npcsPos = npc:GetPos()
-    local nodesPos = self:GetPos()
+        elseif debuggingBool then
+            debugoverlay.Cross( npcsEyePos, 50, 5, color_white, true )
+
+        end
+
+        needsToTakeCover = true
+
+    end
+
+    local npcsSched = npcMeta.GetCurrentSchedule( npc )
+
+    if isAttacking( npcsSched ) and not needsToTakeCover then return end
+
+    local npcsPos = entMeta.GetPos( npc )
+    local nodesPos = entMeta.GetPos( self )
     if npcsPos:DistToSqr( nodesPos ) < tooCloseToNode then return end -- already at this node!   
 
 
-    local theirCaps = npc:CapabilitiesGet()
+    local theirCaps = npcMeta.CapabilitiesGet( npc )
     local isGround = bit.band( theirCaps, CAP_MOVE_GROUND ) >= 1
     if not isGround then return end
 
@@ -264,10 +372,10 @@ function ENT:ManageNPC( npc )
     local nodePosFootHeight = nodesPos + footOffset
     local canJump = bit.band( theirCaps, CAP_MOVE_JUMP ) >= 1
 
-    local npcDangerHint = npc:GetBestSoundHint( SOUND_DANGER )
+    local npcDangerHint = sound.GetLoudestSoundHint( SOUND_DANGER, npcsPos )
     if npcDangerHint and npcDangerHint.origin:DistToSqr( nodesPos ) < ( npcDangerHint.volume * 1.5 ) ^ 2 then
-        npc.campaignents_NextFallbackMove = CurTime()
-        npc.campaignents_NextMoveWhenSeeing = CurTime()
+        npcsTbl.campaignents_NextFallbackMove = CurTime()
+        npcsTbl.campaignents_NextMoveWhenSeeing = CurTime()
         return
 
     end
@@ -276,7 +384,7 @@ function ENT:ManageNPC( npc )
     -- ignore height 
     if canJump then
         -- jumping right now!
-        if not npc:IsOnGround() then return end
+        if not entMeta.IsOnGround( npc ) then return end
 
         highestZ = math.max( traverseStartPos.z, nodePosFootHeight.z ) + viewOffset.z --allow npc to jump over low down stuff!
         traverseStartPos.z = highestZ
@@ -284,9 +392,9 @@ function ENT:ManageNPC( npc )
 
     end
 
-    local npcCanTraverseToNode = PosCanSee( traverseStartPos, nodePosFootHeight, { npc, self } )
+    local canCrowFly = IsntBlocked( traverseStartPos, nodePosFootHeight, { npc, self } )
 
-    if not npcCanTraverseToNode then return end
+    if not canCrowFly then return end
 
 
     local nodePosEyeHeight = nodesPos + viewOffset
@@ -295,66 +403,89 @@ function ENT:ManageNPC( npc )
     if not npcCanSeeNode then return end
 
 
-    local fallbackMove = ( npc.campaignents_NextFallbackMove or 0 ) < CurTime()
-    local canWeaps = bit.band( theirCaps, CAP_USE_WEAPONS ) ~= 0
+    local enemsPos = npcsEnemy:GetPos()
+    local canShoot = PosCanSee( npcsEyePos, enemysEyePos, { npc, npcsEnemy } )
+    local fallbackMove = ( npcsTbl.campaignents_NextFallbackMove or 0 ) < CurTime()
+    local canWeaps = bit.band( theirCaps, CAP_USE_WEAPONS ) >= 1
     local activeWep
-    local potentialShotgun
-    local canRangedWep
-    local canMeleeWep
+    local charger
     if canWeaps then
         activeWep = npc:GetActiveWeapon()
-        canRangedWep = IsValid( activeWep ) and ( bit.band( theirCaps, CAP_WEAPON_RANGE_ATTACK1 ) or bit.band( theirCaps, CAP_WEAPON_RANGE_ATTACK2 ) )
-        canMeleeWep = IsValid( activeWep ) and ( bit.band( theirCaps, CAP_WEAPON_MELEE_ATTACK1 ) or bit.band( theirCaps, CAP_WEAPON_MELEE_ATTACK2 ) )
 
     end
-    if canRangedWep then
-        potentialShotgun = string.find( activeWep:GetClass(), "shotgun" )
+
+    if IsValid( activeWep ) then
+        charger = string.find( activeWep:GetClass(), "shotgun" )
 
     end
 
     local nodesDistToEnemySqr = nodesPos:DistToSqr( enemysEyePos )
     local nodeCanSeeEnemy = PosCanSee( nodePosEyeHeight, enemysEyePos, enemy )
-    local distToEnemySqr = npcsEyePos:DistToSqr( enemysEyePos )
     local nodeIsCloser = nodesDistToEnemySqr < distToEnemySqr
 
-    if canWeaps and canRangedWep then
+    if canWeaps and IsValid( activeWep ) then
         local react = npcsReactionSpeed( npc )
         local lowHealth = self:Health() < ( self:GetMaxHealth() * 0.25 )
 
         -- either approach enemy or keep our distance!
         local canApproach = distToEnemySqr > meleeCloseEnough
         local getCloseThenOrbit = ( canApproach or not nodeIsCloser )
-        local justChargeEm = ( potentialShotgun and nodeIsCloser )
+        local justChargeEm = ( charger and nodeIsCloser )
         local advantagousPosition = justChargeEm or getCloseThenOrbit
 
-        local nodeCanSeeEnemysFeet = PosCanSee( nodePosFootHeight, enemsPos + footOffset, { enemy, self } )
-        local enemyCanSeeNodesFoot = PosCanSee( nodePosFootHeight, npcsEyePos, { enemy, self } )
-        local goodCover = not nodeCanSeeEnemysFeet and not enemyCanSeeNodesFoot
+        local nodesFeetCanSeeEnemyFeet  = CanSeeOrHitNpc( nodePosFootHeight, enemsPos + footOffset, { enemy, self } )
+        local nodesFeetCanSeeEnemy      = CanSeeOrHitNpc( nodePosFootHeight, enemysEyePos, { enemy, self } )
+        local greatSoftCover = not nodesFeetCanSeeEnemyFeet and not nodesFeetCanSeeEnemy and nodeCanSeeEnemy
+        local greatHardCover = greatSoftCover and not nodeCanSeeEnemy and not nodeIsCloser
 
         if noAmmo or lowHealth then
+            local enemysFeetCanSeeNpcsFeet  = CanSeeOrHitNpc( enemsPos + footOffset, npcsPos + footOffset, { enemy, self } )
+            local enemyCanSeeNpcsFeet       = CanSeeOrHitNpc( enemysEyePos, npcsPos + footOffset, { enemy, self } )
+            local imInSoftCover = not enemysFeetCanSeeNpcsFeet and not enemyCanSeeNpcsFeet
+
+            -- stay in cover!
+            if imInSoftCover then
+                npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + 1
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 5
+                if debuggingBool then
+                    debugoverlay.Line( nodePosFootHeight, enemsPos + footOffset, 5, white, true )
+                    debugoverlay.Line( nodePosFootHeight, npcsEyePos, 5, white, true )
+
+                end
             -- take cover!
-            if goodCover and nodeCanSeeEnemy then
+            elseif greatHardCover then
                 -- stay in cover!
-                npc.campaignents_NextMoveWhenSeeing = CurTime() + 3 + react
+                npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + 3 + react
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 15
                 self:MakeNPCGotoUs( npc )
+                if debuggingBool then
+                    debugoverlay.Line( nodePosFootHeight, enemsPos + footOffset, 5, white, true )
+                    debugoverlay.Line( nodePosFootHeight, npcsEyePos, 5, white, true )
+
+                end
 
             -- it timed out! just go to non-ideal cover!
-            elseif fallbackMove and not nodeCanSeeEnemy then
+            elseif fallbackMove and greatSoftCover then
                 self:MakeNPCGotoUs( npc )
+                if debuggingBool then
+                    debugoverlay.Line( npc:GetPos(), self:GetPos(), 5, white, true )
+                    debugoverlay.Line( nodePosFootHeight, enemsPos + footOffset, 5, white, true )
+                    debugoverlay.Line( nodePosFootHeight, npcsEyePos, 5, white, true )
 
+                end
             end
             -- reloadin
 
         -- acquire los!
         elseif not canShoot then
-            local justHadLos = ( npc.campaignents_NextAcquireLos or 0 ) > CurTime()
+            local justHadLos = ( npcsTbl.campaignents_NextAcquireLos or 0 ) > CurTime()
             if nodeCanSeeEnemy and not justHadLos then
                 self:MakeNPCGotoUs( npc )
-                npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 2, 4 ) + react
-                npc.campaignents_NextFallbackMove = CurTime() + 20
+                npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 1, 2 ) + react
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 20
 
             elseif nodeIsCloser and not justHadLos then
-                npc.campaignents_NextFallbackMove = CurTime() + 10
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 10
                 self:MakeNPCGotoUs( npc )
 
             elseif fallbackMove then
@@ -366,22 +497,21 @@ function ENT:ManageNPC( npc )
         elseif canShoot and advantagousPosition and nodeCanSeeEnemy then
             self:MakeNPCGotoUs( npc )
             -- charge
-            if potentialShotgun then
-                npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 1, 2 )
-                npc.campaignents_NextFallbackMove = CurTime() + 20
+            if charger then
+                npcsTbl.campaignents_NextAcquireLos = CurTime()
+                npcsTbl.campaignents_NextMoveWhenSeeing = CurTime()
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 20
 
             -- orbit!
             else
-                -- going into cover
-                if goodCover and nodeCanSeeEnemy then
-                    npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 2, 4 ) + react
-                    npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 8, 12 )
-                    npc.campaignents_NextFallbackMove = CurTime() + 25
+                -- going into great cover we can shoot from, wait a long time for the next movement
+                if greatSoftCover and nodeCanSeeEnemy then
+                    npcsTbl.campaignents_NextAcquireLos = CurTime() + math.Rand( 6, 8 ) + react
+                    npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 8, 12 )
+                    npcsTbl.campaignents_NextFallbackMove = CurTime() + 25
 
                 else
-                    npc.campaignents_NextAcquireLos = CurTime() + math.Rand( 1, 2 ) + react
-                    npc.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 6, 8 )
-                    npc.campaignents_NextFallbackMove = CurTime() + 20
+                    npcsTbl.campaignents_NextFallbackMove = CurTime() + 20
 
                 end
             end
@@ -391,18 +521,18 @@ function ENT:ManageNPC( npc )
 
         end
     -- npc_citizen without weapons? maybe?
-    elseif canWeaps and not canRangedWep and not canMeleeWep then
+    elseif canWeaps and not IsValid( activeWep ) then
         -- run away!!!
         if not nodeIsCloser then
             self:MakeNPCGotoUs( npc )
-            npc.campaignents_NextMoveWhenSeeing = CurTime() + 2
-            npc.campaignents_NextFallbackMove = CurTime() + 10
+            npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + 2
+            npcsTbl.campaignents_NextFallbackMove = CurTime() + 10
 
         elseif fallbackMove then
             self:MakeNPCGotoUs( npc )
 
         end
-    -- zombie or antions!
+    -- zombie, antions or npc_hunter!
     else
         local jumpingToRightHeight = canJump
         if jumpingToRightHeight then
@@ -416,16 +546,16 @@ function ENT:ManageNPC( npc )
         -- allow default melee behaviour to do it's thing
         if distToEnemySqr < meleeCloseEnough then
             -- cant reach them, or we're behind something, just path to the node!
-            local notEngaging = not canShoot or ( jumpingToRightHeight and nodeIsCloser )
+            local notEngaging = not sightClearOrBlockedByNpc or ( jumpingToRightHeight and nodeIsCloser )
             if notEngaging and nodeCanSeeEnemy then
                 self:MakeNPCGotoUs( npc )
                 didMove = true
-                npc.campaignents_NextFallbackMove = CurTime() + 8
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 8
 
             elseif notEngaging and fallbackMove then
                 self:MakeNPCGotoUs( npc )
                 didMove = true
-                npc.campaignents_NextFallbackMove = CurTime() + 1
+                npcsTbl.campaignents_NextFallbackMove = CurTime() + 1
 
             end
 
@@ -433,24 +563,24 @@ function ENT:ManageNPC( npc )
         elseif not canShoot and nodeCanSeeEnemy or jumpingToRightHeight then
             self:MakeNPCGotoUs( npc )
             didMove = true
-            npc.campaignents_NextFallbackMove = CurTime() + 8
+            npcsTbl.campaignents_NextFallbackMove = CurTime() + 8
 
         -- approach enemy!
         elseif nodeIsCloser then
             self:MakeNPCGotoUs( npc )
             didMove = true
-            npc.campaignents_NextFallbackMove = CurTime() + 5
+            npcsTbl.campaignents_NextFallbackMove = CurTime() + 5
 
         -- don't stand still!
         elseif fallbackMove then
             self:MakeNPCGotoUs( npc )
             didMove = true
-            npc.campaignents_NextFallbackMove = CurTime() + 1
+            npcsTbl.campaignents_NextFallbackMove = CurTime() + 1
 
         end
         if didMove and jumpingToRightHeight and nodesDistToEnemySqr < meleeCloseEnough then
             -- let npc acquire targ
-            npc.campaignents_NextMove = CurTime() + 3
+            npcsTbl.campaignents_NextMove = CurTime() + 3
 
         end
     end
@@ -471,6 +601,9 @@ function ENT:MakeNPCGotoUs( npc, _ )
     npc.campaignents_CombatNodeOccupied = true
     npc:SetSchedule( SCHED_TARGET_CHASE )
     npc:SetIgnoreConditions( targetChaseDontBreak )
+
+    if not debuggingBool then return end
+    debugoverlay.Line( npc:GetPos(), self:GetPos(), 1, red, true )
 
 end
 

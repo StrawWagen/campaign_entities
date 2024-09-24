@@ -46,40 +46,41 @@ local function SparkEffect( SparkPos )
 end
 
 function ENT:SetupDataTables()
-    self:NetworkVar( "Bool",    1, "NeedToLookAway",    { KeyName = "needtolookaway",       Edit = { order = 2, type = "Bool", category = "Generic Conditions" } } )
-    self:NetworkVar( "Bool",    2, "On",                { KeyName = "on",                   Edit = { readonly = true } } )
+    local i = 1
+    self:NetworkVar( "Bool",    1, "NeedToLookAway",    { KeyName = "needtolookaway",       Edit = { order = i + 1, type = "Bool", category = "Generic Conditions" } } )
+    self:NetworkVar( "Bool",    2, "BlockSpawn",        { KeyName = "blockspawn",           Edit = { readonly = true } } )
     self:NetworkVar( "Bool",    3, "ForceSpawn",        { KeyName = "forcespawn",           Edit = { readonly = true } } )
 
-    self:NetworkVar( "Int",     2, "MaxToSpawn",        { KeyName = "maxtospawn",           Edit = { order = 4, type = "Int", min = -1, max = 120, category = "Generic Conditions" } } )
-    self:NetworkVar( "Int",     3, "MinSpawnInterval",  { KeyName = "minspawninterval",     Edit = { order = 5, type = "Int", min = 0, max = 240, category = "Generic Conditions" } } )
-    self:NetworkVar( "Int",     4, "SpawnRadiusStart",  { KeyName = "spawnradiusstart",     Edit = { order = 6, type = "Int", min = 0, max = 32000, category = "Generic Conditions" } } )
-    self:NetworkVar( "Int",     5, "SpawnRadiusEnd",    { KeyName = "spawnradiusend",       Edit = { order = 7, type = "Int", min = 0, max = 32000, category = "Generic Conditions" } } )
+    self:NetworkVar( "Int",     2, "MaxToSpawn",        { KeyName = "maxtospawn",           Edit = { order = i + 1, type = "Int", min = -1, max = 120, category = "Generic Conditions" } } )
+    self:NetworkVar( "Int",     3, "MinSpawnInterval",  { KeyName = "minspawninterval",     Edit = { order = i + 1, type = "Int", min = 0, max = 240, category = "Generic Conditions" } } )
+    self:NetworkVar( "Int",     4, "SpawnRadiusStart",  { KeyName = "spawnradiusstart",     Edit = { order = i + 1, type = "Int", min = 0, max = 32000, category = "Generic Conditions" } } )
+    self:NetworkVar( "Int",     5, "SpawnRadiusEnd",    { KeyName = "spawnradiusend",       Edit = { order = i + 1, type = "Int", min = 0, max = 32000, category = "Generic Conditions" } } )
 
-    self:NetworkVar( "Int",     6, "MyId",              { KeyName = "myid",                 Edit = { order = 9, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
-    self:NetworkVar( "Int",     7, "IdToWaitFor",       { KeyName = "idtowaitfor",          Edit = { order = 10, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     6, "MyId",              { KeyName = "myid",                 Edit = { order = i + 1, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     7, "IdToWaitFor",       { KeyName = "idtowaitfor",          Edit = { order = i + 1, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
 
     self:NetworkVar( "Int",     8, "GoalID",            { KeyName = "goalid",               Edit = { readonly = true } } )
     self:NetworkVar( "Bool",    4, "ShowGoalLinks",     { KeyName = "forcespawn",           Edit = { readonly = true } } )
     self:NetworkVar( "Entity",  31, "ProxyEnt",         { KeyName = "proxyEnt",             Edit = { readonly = true } } )
 
-    self:NetworkVar( "Bool",    5, "DoManhacks",        { KeyName = "domanhacks",           Edit = { order = 11, type = "Bool", category = "Combine APC" } } )
-    self:NetworkVar( "Bool",    6, "CanDrive",          { KeyName = "candrive",             Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
-    self:NetworkVar( "Bool",    7, "Static",            { KeyName = "static",               Edit = { order = 12, type = "Bool", category = "Combine APC" } } )
-    self:NetworkVar( "Int",     10, "PoliceCount",      { KeyName = "copcount",             Edit = { order = 13, type = "Int", min = 0, max = 10, category = "Combine APC" } } )
-    self:NetworkVar( "Int",     11, "APCHealth",        { KeyName = "apchealth",            Edit = { order = 14, type = "Int", min = 500, max = 3000, category = "Combine APC" } } )
-    self:NetworkVar( "Float",   0, "APCDamageMul",      { KeyName = "apcdamagemul",         Edit = { order = 14, type = "float", min = 0.5, max = 3, category = "Combine APC" } } )
+    self:NetworkVar( "Bool",    5, "DoManhacks",        { KeyName = "domanhacks",           Edit = { order = i + 1, type = "Bool", category = "Combine APC" } } )
+    self:NetworkVar( "Bool",    6, "CanDrive",          { KeyName = "candrive",             Edit = { order = i + 1, type = "Bool", category = "Combine APC" } } )
+    self:NetworkVar( "Bool",    7, "Static",            { KeyName = "static",               Edit = { order = i + 1, type = "Bool", category = "Combine APC" } } )
+    self:NetworkVar( "Int",     10, "PoliceCount",      { KeyName = "copcount",             Edit = { order = i + 1, type = "Int", min = 0, max = 10, category = "Combine APC" } } )
+    self:NetworkVar( "Int",     11, "APCHealth",        { KeyName = "apchealth",            Edit = { order = i + 1, type = "Int", min = 500, max = 3000, category = "Combine APC" } } )
+    self:NetworkVar( "Float",   0, "APCDamageMul",      { KeyName = "apcdamagemul",         Edit = { order = i + 1, type = "float", min = 0.5, max = 3, category = "Combine APC" } } )
 
     if SERVER then
         self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
             if not SERVER then return end
             if not IsValid( self ) then return end
 
-            campaignents_TrackPlyProximity( self, new )
+            CAMPAIGN_ENTS.TrackPlyProximity( self, new )
 
         end )
 
         self:SetNeedToLookAway( false )
-        self:SetOn( true )
+        self:SetBlockSpawn( false )
 
         self:SetMyId( -1 )
         self:SetIdToWaitFor( -1 )
@@ -107,7 +108,7 @@ function ENT:SetupDataTables()
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
-            campaignents_DoBeamColor( self )
+            CAMPAIGN_ENTS.DoBeamColor( self )
 
         end )
     end )
@@ -145,6 +146,7 @@ function ENT:SpawnFunction( spawner, tr )
 end
 
 function ENT:ResetVars()
+    self.campaignents_Thing = nil
     self.spawnedFirstThing = nil
     self.aiWasDisabled = nil
     self.spawnedCount = 0
@@ -169,11 +171,11 @@ function ENT:SelfSetup()
 
     if self.duplicatedIn then return end
     if nextRespawnerMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "Noclip and look up!\nI spawn a boss APC!\nOpen my context menu!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         MSG = "This message will not appear when duped in."
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         nextRespawnerMessage = CurTime() + 25
 
@@ -186,6 +188,7 @@ function ENT:SpawnThing()
     if not IsValid( newThing ) then return end
 
     self:SetupAPC( newThing )
+    self:TransferStuffTo( newThing )
 
     newThing.DoNotDuplicate = true
 
@@ -238,24 +241,22 @@ if CLIENT then
     local beamMat = Material( "sprites/physbeama" )
 
     function ENT:Draw()
-        if campaignents_IsEditing() then
-            self:DrawModel()
+        self:DrawModel()
 
-            local nextNPCGoalCheck = self.nextNPCGoalCheck or 0
-            local NPCGoal = self.NPCGoal
-            if nextNPCGoalCheck < CurTime() then
-                self.nextNPCGoalCheck = CurTime() + 0.75
+        local nextNPCGoalCheck = self.nextNPCGoalCheck or 0
+        local NPCGoal = self.NPCGoal
+        if nextNPCGoalCheck < CurTime() then
+            self.nextNPCGoalCheck = CurTime() + 0.75
 
-                NPCGoal = self:GetMyNPCGoal()
-                self.NPCGoal = NPCGoal
-
-            end
-            if not IsValid( NPCGoal ) then return end
-
-            render.SetMaterial( beamMat )
-            render.DrawBeam( self:WorldSpaceCenter(), NPCGoal:GetPos(), 20, 1, 0, self.GoalLinkColor )
+            NPCGoal = self:GetMyNPCGoal()
+            self.NPCGoal = NPCGoal
 
         end
+        if not IsValid( NPCGoal ) then return end
+
+        render.SetMaterial( beamMat )
+        render.DrawBeam( self:WorldSpaceCenter(), NPCGoal:GetPos(), 20, 1, 0, self.GoalLinkColor )
+
     end
 end
 
@@ -454,6 +455,10 @@ function ENT:SetupAPC( apc )
                     manhack:SetSaveValue( "m_hTargetEnt", enemy )
                     manhack:SetSchedule( SCHED_TARGET_CHASE )
 
+                    if IsValid( driver ) and IsValid( driver:GetEnemy() ) then
+                        manhack:SetEnemy( driver:GetEnemy() )
+
+                    end
                 end )
             end
             if moving and apc.canDrive and apc:Health() >= apc:GetMaxHealth() * 0.5 then

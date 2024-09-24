@@ -11,7 +11,7 @@ end
 
 ENT.Category    = "Campaign Entities"
 ENT.PrintName   = "Thing Respawner"
-ENT.Author      = "Initially coded by gpt-4, completely reworked by straw"
+ENT.Author      = "straw w wagen"
 ENT.Purpose     = "Spawns a new thing if the previous one is removed."
 ENT.Spawnable   = true
 ENT.AdminOnly   = true
@@ -21,6 +21,8 @@ ENT.Editable    = true
 ENT.DefaultModel = "models/props_c17/oildrum001_explosive.mdl"
 ENT.Material = "models/shadertest/shader5"
 ENT.CanCopy = true -- can copy the data of stuff
+
+ENT.campaignents_Usable = true
 
 ENT.entsToWaitFor = {}
 
@@ -59,7 +61,7 @@ function ENT:DoIdNotify()
                 MSG = "I dont have an id anymore"
 
             end
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
         end
 
         -- it prints twice???? i dont want to find out why, this hack works fine
@@ -100,7 +102,7 @@ function ENT:DoDefaultVariables()
     self:SetDropToFloor( true )
 
     self:SetNeedToLookAway( true )
-    self:SetOn( true )
+    self:SetBlockSpawn( false )
 
     self:SetMaxToSpawn( -1 )
     self:SetMinSpawnInterval( 15 )
@@ -124,7 +126,7 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    6, "NoAutoModel",        { KeyName = "noautomodel",         Edit = { order = i + 1, type = "Bool",      category = "Thing spawned", title = "Disable NPC model Auto-Detect?" } } )
 
     self:NetworkVar( "Bool",    1, "NeedToLookAway",     { KeyName = "needtolookaway",      Edit = { order = i + 1, type = "Bool",      category = "Generic conditions" } } )
-    self:NetworkVar( "Bool",    2, "On",                 { KeyName = "on",                  Edit = { readonly = true } } ) -- wire inputs internal
+    self:NetworkVar( "Bool",    2, "BlockSpawn",         { KeyName = "blockspawn",          Edit = { readonly = true } } ) -- wire inputs internal
     self:NetworkVar( "Bool",    3, "ForceSpawn",         { KeyName = "forcespawn",          Edit = { readonly = true } } ) -- wire inputs internal
     self:NetworkVar( "Int",     1, "MaxToSpawn",         { KeyName = "maxtospawn",          Edit = { order = i + 1, type = "Int",       min = -1, max = 120, category = "Generic conditions" } } )
     self:NetworkVar( "Int",     2, "MinSpawnInterval",   { KeyName = "minspawninterval",    Edit = { order = i + 1, type = "Int",       min = 0, max = 240, category = "Generic conditions" } } )
@@ -134,21 +136,26 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Int",     5, "MyId",               { KeyName = "myid",                Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
     self:NetworkVar( "Int",     6, "IdToWaitFor",        { KeyName = "idtowaitfor",         Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
 
-    self:NetworkVar( "Int",     7, "GoalID",             { KeyName = "goalid",              Edit = { order = i + 1, type = "Int",       min = -1, max = 1000, category = "NPC Goal", waitforenter = true } } )
-    self:NetworkVar( "Bool",    4, "ShowGoalLinks",      { KeyName = "forcespawn",          Edit = { order = i + 1, type = "Bool",      category = "NPC Goal" } } )
+    self:NetworkVar( "Int",     7, "GoalID",             { KeyName = "goalid",              Edit = { order = i + 1, type = "Int",       min = -1, max = 10000, category = "NPC Goal", waitforenter = true } } )
+    self:NetworkVar( "Bool",    4, "ShowGoalLinks",      { KeyName = "showgoallinks",       Edit = { order = i + 1, type = "Bool",      category = "NPC Goal" } } )
 
     self:NetworkVarNotify( "SpawnRadiusEnd", function( _, _, _, new )
         if not SERVER then return end
         if not IsValid( self ) then return end
 
-        campaignents_TrackPlyProximity( self, new )
+        CAMPAIGN_ENTS.TrackPlyProximity( self, new )
 
     end )
 
-    if SERVER then
-        self:DoDefaultVariables()
+    self:NetworkVarNotify( "ClassToSpawn", function()
+        if not SERVER then return end
+        if not IsValid( self ) then return end
+        SafeRemoveEntity( self.campaignents_Thing )
+        self.nextThingSpawn = CurTime()
+        self.nextSpawningThink = CurTime()
+        self.doASimpleSpawn = true
 
-    end
+    end )
 
     self:NetworkVarNotify( "ClassToSpawn", function()
         if not SERVER then return end
@@ -182,7 +189,7 @@ function ENT:SetupDataTables()
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
-            campaignents_DoBeamColor( self )
+            CAMPAIGN_ENTS.DoBeamColor( self )
 
         end )
     end )
@@ -206,8 +213,11 @@ function ENT:SpawnFunction( spawner, tr )
 
     end
 
+    ent:DoDefaultVariables()
+
     ent:Spawn()
     ent:Activate()
+
     local effectdata = EffectData()
     effectdata:SetEntity( ent )
     util.Effect( "propspawn", effectdata )
@@ -218,8 +228,8 @@ function ENT:SpawnFunction( spawner, tr )
     if justToolGunned and IsValid( tr.Entity ) and ent.CanCopy then
         -- certiancopy, did the player 100% mean for this to copy?
         local canCopy, certianCopy = ent:CanAutoCopyThe( tr.Entity )
-        if canCopy then
 
+        if canCopy then
             distUp = math.Clamp( tr.Entity:GetModelRadius(), 25, 160 )
             spawnPos = originalPos + vector_up * distUp
             ent:SetPos( spawnPos )
@@ -230,8 +240,9 @@ function ENT:SpawnFunction( spawner, tr )
                 ent:CaptureCollidersInfo( tr.Entity )
                 ent:SetAngles( tr.Entity:GetAngles() )
 
-                campaignents_MessageOwner( ent, "Autocopied!" )
+                CAMPAIGN_ENTS.MessageOwner( ent, "Autocopied!" )
 
+                -- delete the old thing if the player 100% meant to copy it
                 if not certianCopy then return end
                 SafeRemoveEntity( tr.Entity )
 
@@ -250,8 +261,12 @@ end
 
 function ENT:ResetVars()
     self.campaignents_ThingRespawner = true
-    self.spawnedFirstThing = nil
+    self.campaignents_Thing = nil
+
+    self.campaignents_HasDoneAProximityPass = nil
+    self.triedToFirstTimeSpawn = nil
     self.aiWasDisabled = nil
+
     self.nextSpawningThink = 0
     self.nextThingSpawn = 0
     self.spawnedCount = 0
@@ -266,18 +281,20 @@ function ENT:Initialize()
 
     if SERVER then
         self:SetModel( self.DefaultModel )
-        campaignents_doFadeDistance( self, 3500 )
+        CAMPAIGN_ENTS.doFadeDistance( self, 3500 )
+
         self.OldModel = self.DefaultModel
         self:SetMaterial( self.Material )
         self:DrawShadow( false )
 
         self:PhysicsInit( SOLID_VPHYSICS )
         self:SetMoveType( MOVETYPE_FLY )
-        self:SetCollisionGroup( COLLISION_GROUP_WORLD )
 
-        self:SetCustomCollisionCheck( true )
+        self:SetCollisionGroup( COLLISION_GROUP_WEAPON ) -- dont collide with plys
+        self:GetPhysicsObject():EnableCollisions( false ) -- & dont collide with props
 
-        campaignEnts_EasyFreeze( self )
+        CAMPAIGN_ENTS.StartUglyHiding( self )
+        CAMPAIGN_ENTS.EasyFreeze( self )
 
         self:ResetVars()
 
@@ -294,18 +311,10 @@ function ENT:Initialize()
         self.Outputs = WireLib.CreateSpecialOutputs( self, { "Spawned", "SpawnedCount" }, { "ENTITY", "NORMAL" } )
 
     else
-        campaignents_DoBeamColor( self )
+        CAMPAIGN_ENTS.DoBeamColor( self )
 
     end
 end
-
-hook.Add( "ShouldCollide", "campaignents_respawnersdontcollide", function( ent1, ent2 )
-    if ent1.isCampaignEntsRespawner or ent2.isCampaignEntsRespawner then
-        if ent2:IsPlayer() then return end -- physgunning it!
-        return false
-
-    end
-end )
 
 function ENT:AdditionalInitialize()
 end
@@ -313,11 +322,11 @@ end
 function ENT:TriggerInput( iname, value )
     if iname == "On" then
         if value >= 1 then
-            self:SetOn( true )
+            self:SetBlockSpawn( false )
             self:NextThink( CurTime() + 0.01 )
 
         else
-            self:SetOn( false )
+            self:SetBlockSpawn( true )
             self:NextThink( CurTime() + 0.01 )
 
         end
@@ -338,12 +347,13 @@ local nextRespawnerMessage = 0
 function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextRespawnerMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "Noclip and look up!\nI spawn stuff in! Check my context menu!!\nDrag me into something to \"copy\" it!\nIf 'need to look away' is set, I'll only spawn stuff behind your back!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             MSG = "Change 'maxtospawn' and I'll eventually stop spawning stuff!\nThe radius settings change how far before I spawn!\nThis message will not appear when duped in."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
         end )
 
         nextRespawnerMessage = CurTime() + 25
@@ -352,8 +362,8 @@ function ENT:SelfSetup()
 end
 
 function ENT:OnDuplicated()
-    self:ResetVars()
     self.duplicatedIn = true
+    self:ResetVars()
 
 end
 
@@ -424,6 +434,16 @@ function ENT:SetEntsModelComprehensive( ent, model )
 
 end
 
+-- make it the same material, color as me
+function ENT:TransferStuffTo( newThing )
+    newThing:SetColor( self:GetColor() )
+    local myMaterial = self:GetMaterial()
+    if myMaterial ~= self.Material then
+        newThing:SetMaterial( myMaterial )
+
+    end
+end
+
 function ENT:SpawnThing()
     local modelRad = self:GetModelRadius()
     local downOffset
@@ -446,6 +466,7 @@ function ENT:SpawnThing()
     local defaultPly = Entity( 1 )
     if sentsTable and sentsTable.SpawnFunction and IsValid( defaultPly ) then
         newThing = sentsTable:SpawnFunction( defaultPly, simpleDownTrace, classToSpawn )
+        self:TransferStuffTo( newThing )
         self:SetEntsModelComprehensive( newThing, self:GetModelToSpawn() )
 
         newThing:SetAngles( self:GetAngles() )
@@ -455,6 +476,7 @@ function ENT:SpawnThing()
         newThing = ents.Create( classToSpawn )
         if not IsValid( newThing ) then return end
         newThing:SetPos( posToSetTo )
+        self:TransferStuffTo( newThing )
         -- set model before finished spawning so npc's Spawn can override it, if it wants
         self:SetEntsModelComprehensive( newThing, self:GetModelToSpawn() )
 
@@ -484,6 +506,7 @@ function ENT:SpawnThing()
                 newThing:SetPos( posToSetTo + offsetOffGround * 4 )
 
             end )
+        -- config says we let the thing do its own model
         else
             self:SetModelToSpawn( newThing:GetModel() )
 
@@ -495,13 +518,21 @@ function ENT:SpawnThing()
 
     end
 
-    if self:GetNPCWeapon() and newThing.Give then
+    if self.entityModsToApply then
+        newThing.EntityMods = table.Copy( self.entityModsToApply )
+        local owner = CAMPAIGN_ENTS.GetOwner( self ) or Entity( 1 )
+        duplicator.ApplyEntityModifiers( owner, newThing )
+
+    end
+
+    if self:GetNPCWeapon() and newThing.Give and self:GetNPCWeapon() ~= "" then
         newThing:Give( self:GetNPCWeapon() )
 
     end
+
     newThing.DoNotDuplicate = true
 
-    self:CallOnRemove( "campaignEnts_killChildEnts", function( _, spawnedThing )
+    self:CallOnRemove( "campaignents_killChildEnts", function( _, spawnedThing )
         if not IsValid( spawnedThing ) then return end
         -- crash fix related to spawning airboats!
         spawnedThing:Fire( "KillHierarchy" )
@@ -512,7 +543,7 @@ function ENT:SpawnThing()
     self.spawnedCount = self.spawnedCount + 1
 
     -- let them edit the goal before we ask it to set itself up!
-    if not campaignents_EnabledAi() then
+    if not CAMPAIGN_ENTS.EnabledAi() then
         self.doDelayedMakeSpawnedGotoGoals = true
 
     else
@@ -532,8 +563,11 @@ function ENT:BlockGoodSpawn()
 end
 
 function ENT:CampaignEnts_ProximityFilter( ply )
-    local dobearingCheck = self:GetNeedToLookAway()
-    if dobearingCheck and EntIsLookingAtEnt( ply, self ) then
+    if not self.triedToFirstTimeSpawn then return true end
+
+    local minDistSqr = self:GetSpawnRadiusStart() ^ 2
+    local distToPlySqr = ply:GetPos():DistToSqr( self:GetPos() )
+    if distToPlySqr < minDistSqr then
         return
 
     end
@@ -541,29 +575,32 @@ function ENT:CampaignEnts_ProximityFilter( ply )
 
 end
 
-function ENT:IsGoodSpawn( ignoreBearing )
+-- second arg is for debugging
+function ENT:IsGoodSpawn( firstTimeSpawn )
 
-    if self:GetOn() ~= true then return end
-    if self:BlockGoodSpawn() == true then return end
+    if self:GetBlockSpawn() == true then return nil, "blockSpawnNwvar" end
+    if self:BlockGoodSpawn() == true then return nil, "blockspawn" end
 
-    local forcedSpawn = self.GetForceSpawn and self:GetForceSpawn()
+    local forcedSpawn = self:GetForceSpawn()
     if forcedSpawn then return true end
 
-    local dobearingCheck = self:GetNeedToLookAway() and not ignoreBearing
-    local minDistSqr = self:GetSpawnRadiusStart() ^ 2
-    local maxDistSqr = self:GetSpawnRadiusEnd() ^ 2
-    if minDistSqr == 0 and maxDistSqr == 0 then return false end -- dont waste perf!
+    local ply = CAMPAIGN_ENTS.PlyInProxmity( self )
+    if not IsValid( ply ) then return nil, "noproxply" end
 
-    local ply = campaignEnts_PlyInProxmity( self )
-
-    if not IsValid( ply ) then return false end
+    local dobearingCheck = self:GetNeedToLookAway() and not firstTimeSpawn
     if dobearingCheck and EntIsLookingAtEnt( ply, self ) then
-        return
+        return nil, "theylooking"
 
     end
+
+    local minDistSqr = self:GetSpawnRadiusStart() ^ 2
+
+    -- ignore minDist on first time spawn
+    if firstTimeSpawn then return true, "mindistfirstspawn" end
+
     local distToPlySqr = ply:GetPos():DistToSqr( self:GetPos() )
     if distToPlySqr < minDistSqr then
-        return
+        return nil, "tooclose"
 
     end
 
@@ -575,25 +612,25 @@ local printedMessage = nil
 
 function ENT:Think()
     if not SERVER then return end
-    local enabledAi = campaignents_EnabledAi()
+    local enabledAi = CAMPAIGN_ENTS.EnabledAi()
 
     if self:IsPhysgunPickedUp() then
         if self.CanCopy then
             if not printedMessage then
                 printedMessage = true
-                campaignents_MessageOwner( self, "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
+                CAMPAIGN_ENTS.MessageOwner( self, "Thing Respawner: Drag me into something so i can maybe copy their settings!" )
 
             end
             self:CaptureCollidersInfo()
 
         end
-        campaignents_captureGoalID( self )
+        CAMPAIGN_ENTS.captureGoalID( self )
 
     end
 
     -- upon ai enabling, despawn our thing, and reset our spawn count, so you can test without making tons of useless saves
     if self.aiWasDisabled and enabledAi then
-        self.spawnedFirstThing = nil
+        self.triedToFirstTimeSpawn = nil
         self.aiWasDisabled = nil
         self.spawnedCount = 0
         self.nextSpawningThink = 0
@@ -616,27 +653,31 @@ function ENT:Think()
 
     -- hit max spawn count! ignore max spawn count if the player's doing editing with ai disabled.
     if self:GetMaxToSpawn() > 0 and self.spawnedCount >= self:GetMaxToSpawn() and enabledAi then return end
-    local forcedSpawn = self.GetForceSpawn and self:GetForceSpawn()
+    local forcedSpawn = self:GetForceSpawn()
 
     if self.nextSpawningThink > CurTime() and not forcedSpawn then return end
 
     if #self.entsToWaitFor >= 1 then
         for _, waiting in ipairs( self.entsToWaitFor ) do
-            if waiting.spawnedCount <= 0 then return end
+            if IsValid( waiting ) and waiting.spawnedCount <= 0 then return end
 
         end
     end
 
-    if not self.spawnedFirstThing or self.doASimpleSpawn then
-        -- initial spawn
-        self.spawnedFirstThing = true
-        -- simple spawn is just for the editing callbacks
-        self.doASimpleSpawn = nil
-        -- ply spawned it from spawnmenu, or save just loaded, bypass fov check
-        local goodSpawn = self:IsGoodSpawn( true )
-        if goodSpawn then
-            self:SpawnThing()
+    if not self.triedToFirstTimeSpawn or self.doASimpleSpawn then
+        if self.campaignents_HasDoneAProximityPass then
+            -- initial spawn
+            self.triedToFirstTimeSpawn = true
+            -- simple spawn is just for the editing callbacks
+            self.doASimpleSpawn = nil
+            -- ply spawned it from spawnmenu, or save just loaded, ignore bearing check and mindist
+            local goodSpawn = self:IsGoodSpawn( true )
+            --debugoverlay.Text( self:GetPos(), reason, 10, false )
+            --print( "A", goodSpawn, reason )
+            if goodSpawn then
+                self:SpawnThing()
 
+            end
         end
         return
 
@@ -671,11 +712,20 @@ if CLIENT then
     local hintMatId = surface.GetTextureID( "effects/yellowflare" )
     local hintColor = Color( 255, 255, 255, 255 )
     local tooFar = 300^2
+    local vec_zero = Vector( 0, 0, 0 )
+    local LocalPlayer = LocalPlayer
+
+    local originHintsForModels = {}
 
     function ENT:DrawOriginHint()
-        local myPos = self:GetPos()
-        if myPos:DistToSqr( LocalPlayer():GetPos() ) > tooFar then return end
-        local pos2d = myPos:ToScreen()
+        local myModel = self:GetModel()
+        if not myModel then return end
+
+        local currOffset = originHintsForModels[ myModel ] or vec_zero
+        local hintPos = self:LocalToWorld( currOffset )
+
+        if hintPos:DistToSqr( LocalPlayer():GetPos() ) > tooFar then return end
+        local pos2d = hintPos:ToScreen()
 
         local size = 25
 
@@ -702,30 +752,60 @@ if CLIENT then
     local beamMat = Material( "sprites/physbeama" )
 
     function ENT:Draw()
-        if campaignents_IsEditing() then
-            self:DrawModel()
-            self:DrawOriginHint()
-            if not self:GetShowGoalLinks() then return end
+        self:DrawModel()
+        self:DrawOriginHint()
+        if not self.GetShowGoalLinks then return end
+        if not self:GetShowGoalLinks() then return end
 
-            local nextNPCGoalCheck = self.nextNPCGoalCheck or 0
-            local NPCGoals = self.NPCGoals
-            if nextNPCGoalCheck < CurTime() then
-                self.nextNPCGoalCheck = CurTime() + 0.75
+        local nextNPCGoalCheck = self.nextNPCGoalCheck or 0
+        local NPCGoals = self.NPCGoals
+        if nextNPCGoalCheck < CurTime() then
+            self.nextNPCGoalCheck = CurTime() + 0.75
 
-                NPCGoals = self:GetMyNPCGoals()
-                self.NPCGoals = NPCGoals
+            NPCGoals = self:GetMyNPCGoals()
+            self.NPCGoals = NPCGoals
 
-            end
-            if not NPCGoals or #NPCGoals < 1 then return end
+        end
+        if not NPCGoals or #NPCGoals < 1 then return end
 
-            for _, goal in ipairs( NPCGoals ) do
-                if not IsValid( goal ) then continue end
-                render.SetMaterial( beamMat )
-                render.DrawBeam( self:GetPos(), goal:GetPos(), 20, 1, 0, self.GoalLinkColor )
+        for _, goal in ipairs( NPCGoals ) do
+            if not IsValid( goal ) then continue end
+            render.SetMaterial( beamMat )
+            render.DrawBeam( self:GetPos(), goal:GetPos(), 20, 1, 0, self.GoalLinkColor )
 
-            end
         end
     end
+
+    local function saveOriginHint( ent, trace )
+        local myModel = ent:GetModel()
+        if not myModel then return true end
+
+        originHintsForModels[ myModel ] = ent:WorldToLocal( trace.HitPos )
+
+    end
+
+    function ENT:CanTool( ply, trace )
+        if ply ~= LocalPlayer() then return true end
+        saveOriginHint( self, trace )
+
+        return true
+
+    end
+
+    function ENT:CanProperty( ply )
+        if ply ~= LocalPlayer() then return true end
+        saveOriginHint( self, ply:GetEyeTrace() )
+
+        return true
+
+    end
+
+    hook.Add( "PhysgunPickup", "campaignents_saveoriginhints", function( ply, pickedUp )
+        if not pickedUp.isCampaignEntsRespawner then return end
+        if ply ~= LocalPlayer() then return end
+        saveOriginHint( pickedUp, ply:GetEyeTrace() )
+
+    end )
 end
 
 function ENT:CaptureCollidersInfo( theHit )
@@ -738,6 +818,7 @@ function ENT:CaptureCollidersInfo( theHit )
 
     if not IsValid( theHit ) then return end
 
+    if theHit:IsPlayer() then return end
     if theHit == self.campaignents_Thing then return end
     if theHit == self.lastInfoCaptured then return end
 
@@ -746,19 +827,44 @@ function ENT:CaptureCollidersInfo( theHit )
 
     self:SetClassToSpawn( theHit:GetClass() )
     self:SetModelToSpawn( theHit:GetModel() )
-    if theHit.Give then
-        local weap = theHit:GetActiveWeapon()
-        if not IsValid( weap ) then return end
-        self:SetNPCWeapon( weap:GetClass() )
+
+    -- bit of scope creep never hurt anyone...
+    local modDataToSave = {}
+    local theirMods = theHit.EntityMods
+    if theirMods then
+        local copiedEntMods = table.Copy( theirMods )
+        self.entityModsToApply = copiedEntMods
+        modDataToSave.entMods = copiedEntMods
+
+    elseif self.entityModsToApply then
+        self.entityModsToApply = nil
 
     end
+
+    duplicator.StoreEntityModifier( self, "thingrespawner_persistmodifiers", modDataToSave )
+
+    if theHit.Give then
+        local weap = theHit:GetActiveWeapon()
+        if IsValid( weap ) then
+            self:SetNPCWeapon( weap:GetClass() )
+
+        end
+    end
+
 end
+
+duplicator.RegisterEntityModifier( "thingrespawner_persistmodifiers", function( _, ent, data )
+    if data.entMods then
+        ent.entityModsToApply = data.entMods
+
+    end
+end )
 
 function ENT:FindAndManageWithThisId( targetId )
 
     if targetId <= 0 and self:GetCreationTime() + 1 < CurTime() then
         local MSG = "Not waiting for anything!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         self.entsToWaitFor = {}
 
@@ -785,7 +891,7 @@ function ENT:FindAndManageWithThisId( targetId )
     if self:GetCreationTime() + 1 > CurTime() then return end
 
     local MSG = "Waiting for " .. #entsToWaitFor .. " other respawners with id " .. targetId .. " to have all spawned at least 1 thing."
-    campaignents_MessageOwner( self, MSG )
+    CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
 end
 
@@ -832,14 +938,14 @@ function ENT:IsPhysgunPickedUp()
 
 end
 
-hook.Add( "PhysgunPickup", "campaignents_respawner_pickedup", function( picker, picked ) 
+hook.Add( "PhysgunPickup", "campaignents_respawner_pickedup", function( picker, picked )
     if not picked.isCampaignEntsRespawner then return end
 
     picked.campaignents_PickerUpper = picker
 
 end )
 
-hook.Add( "PhysgunDrop", "campaignents_respawner_dropped", function( dropper, dropped )
+hook.Add( "PhysgunDrop", "campaignents_respawner_dropped", function( _, dropped )
     if not dropped.isCampaignEntsRespawner then return end
 
     dropped.campaignents_PickerUpper = nil

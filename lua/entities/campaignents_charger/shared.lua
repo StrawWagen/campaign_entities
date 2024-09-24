@@ -20,6 +20,7 @@ local vec_up = Vector( 0, 0, 1 )
 
 function ENT:AdditionalInitialize( proxyEnt )
     timer.Simple( 0, function()
+        if not IsValid( proxyEnt ) then return end
         local myPos = proxyEnt:GetPos()
         local floorTr = {
             start = myPos,

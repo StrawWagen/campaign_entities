@@ -69,7 +69,7 @@ function ENT:Initialize()
 
     self:DrawShadow( false )
 
-    campaignents_doFadeDistance( self, 4000 )
+    CAMPAIGN_ENTS.doFadeDistance( self, 4000 )
 
     self.startDummy = ents.Create( "prop_physics" )
     self.startDummy:SetModel( "models/props_combine/combine_fence01b.mdl" )
@@ -93,11 +93,11 @@ function ENT:Initialize()
 
     self:DoShieldCollisions()
 
-    campaignEnts_EasyFreeze( self )
-    campaignEnts_EasyFreeze( self.startDummy )
+    CAMPAIGN_ENTS.EasyFreeze( self )
+    CAMPAIGN_ENTS.EasyFreeze( self.startDummy )
 
     timer.Simple( 0, function()
-        if not self:IsValid() then return end
+        if not IsValid( self ) then return end
 
         local dummyEndPos = self.dummyEndPos
         local dummyEndAng = self.dummyEndAng
@@ -126,7 +126,7 @@ function ENT:Initialize()
         self:DeleteOnRemove( self.endDummy )
         self:SetDummyEnd( self.endDummy )
 
-        campaignEnts_EasyFreeze( self.endDummy )
+        CAMPAIGN_ENTS.EasyFreeze( self.endDummy )
 
     end )
 end
@@ -208,7 +208,7 @@ function ENT:PositionsThink()
     if dummyStart:GetPhysicsObject():IsMotionEnabled() then return false end
     if dummyEnd:GetPhysicsObject():IsMotionEnabled() then return false end
 
-    local posProductLeng = ( dummyStart:GetPos() + dummyEnd:GetPos() ):Length()
+    local posProductLeng = ( dummyStart:GetPos() + dummyEnd:GetPos() ):LengthSqr()
     posProductLeng = math.Round( posProductLeng )
 
     if self.oldPositionProductLeng and self.oldPositionProductLeng == posProductLeng then return true end
@@ -224,15 +224,16 @@ end
 
 function ENT:Think()
     if self.Dead then SafeRemoveEntity( self ) return end
+    local tbl = self:GetTable()
 
-    local alwaysOn = self.GetAlwaysOn and self:GetAlwaysOn()
+    local alwaysOn = tbl.GetAlwaysOn and self:GetAlwaysOn()
 
     if alwaysOn then
-        if IsValid( self.forcefield_Plug ) then
-            SafeRemoveEntity( self.forcefield_Plug )
+        if IsValid( tbl.forcefield_Plug ) then
+            SafeRemoveEntity( tbl.forcefield_Plug )
 
         end
-    elseif not IsValid( self.forcefield_Plug ) then
+    elseif not IsValid( tbl.forcefield_Plug ) then
         self:SpawnMyPlug()
 
     end
@@ -240,16 +241,16 @@ function ENT:Think()
     local positionsResult = self:PositionsThink()
     local broken = positionsResult == nil
     local beingMoved = positionsResult == false
-    local isOn = alwaysOn or ( IsValid( self.forcefield_Plug ) and IsValid( self.forcefield_Plug.Shield_Socket ) and self.forcefield_Plug.Shield_Socket:GetIsPowered() )
+    local isOn = alwaysOn or ( IsValid( tbl.forcefield_Plug ) and IsValid( tbl.forcefield_Plug.Shield_Socket ) and tbl.forcefield_Plug.Shield_Socket:GetIsPowered() )
 
-    for entIndex, soundDat in pairs( self.buzzerSoundsPlaying ) do
+    for entIndex, soundDat in pairs( tbl.buzzerSoundsPlaying ) do
         if not IsValid( soundDat.entity ) then
-            self.buzzerSoundsPlaying[ entIndex ] = nil
+            tbl.buzzerSoundsPlaying[ entIndex ] = nil
             continue
 
         end
         if not soundDat.theSound then
-            self.buzzerSoundsPlaying[ entIndex ] = nil
+            tbl.buzzerSoundsPlaying[ entIndex ] = nil
             continue
 
         end
@@ -264,25 +265,25 @@ function ENT:Think()
     end
 
     if broken then
-        self.Dead = true
-        if self.shieldIsOn then
-            self.shieldIsOn = nil
+        tbl.Dead = true
+        if tbl.shieldIsOn then
+            tbl.shieldIsOn = nil
             TurnOff( self )
 
         end
     elseif beingMoved then
-        if self.shieldIsOn then
-            self.shieldIsOn = nil
+        if tbl.shieldIsOn then
+            tbl.shieldIsOn = nil
             TurnOff( self )
 
         end
 
-    elseif isOn and not self.shieldIsOn then
-        self.shieldIsOn = true
+    elseif isOn and not tbl.shieldIsOn then
+        tbl.shieldIsOn = true
         TurnOn( self )
 
-    elseif not isOn and self.shieldIsOn then
-        self.shieldIsOn = nil
+    elseif not isOn and tbl.shieldIsOn then
+        tbl.shieldIsOn = nil
         TurnOff( self )
 
     end
@@ -292,54 +293,54 @@ function ENT:Think()
     local dummyEnd = self:GetDummyEnd()
 
     -- fix it not playing sometimes
-    local redoTheShieldSound = self.redoTheShieldSound < CurTime()
+    local redoTheShieldSound = tbl.redoTheShieldSound < CurTime()
 
-    if self.shieldIsOn then
-        if not self.field_loopingSound then
+    if tbl.shieldIsOn then
+        if not tbl.field_loopingSound then
             self:EmitSound( "campaign_entities/combineshield_activate.wav", 80, math.random( 95, 105 ) )
 
         end
-        if not self.field_loopingSound or redoTheShieldSound then
-            if self.field_loopingSound then
-                self.field_loopingSound:Stop()
+        if not tbl.field_loopingSound or redoTheShieldSound then
+            if tbl.field_loopingSound then
+                tbl.field_loopingSound:Stop()
 
             end
-            self.field_loopingSound = CreateSound( self, "ambient/machines/combine_shield_loop3.wav" )
-            self.field_loopingSound:Play()
-            self.field_loopingSound:ChangeVolume( 0.5, 0 )
-            self.redoTheShieldSound = CurTime() + math.random( 10, 20 )
+            tbl.field_loopingSound = CreateSound( self, "ambient/machines/combine_shield_loop3.wav" )
+            tbl.field_loopingSound:Play()
+            tbl.field_loopingSound:ChangeVolume( 0.5, 0 )
+            tbl.redoTheShieldSound = CurTime() + math.random( 10, 20 )
 
         end
-        if not self.field_loopingSoundDummy then
+        if not tbl.field_loopingSoundDummy then
             dummyEnd:EmitSound( "campaign_entities/combineshield_activate.wav", 80, math.random( 95, 105 ) )
 
         end
-        if not self.field_loopingSoundDummy or redoTheShieldSound then
-            if self.field_loopingSoundDummy then
-                self.field_loopingSoundDummy:Stop()
+        if not tbl.field_loopingSoundDummy or redoTheShieldSound then
+            if tbl.field_loopingSoundDummy then
+                tbl.field_loopingSoundDummy:Stop()
 
             end
-            self.field_loopingSoundDummy = CreateSound( dummyEnd, "ambient/machines/combine_shield_loop3.wav" )
-            self.field_loopingSoundDummy:Play()
-            self.field_loopingSoundDummy:ChangeVolume( 0.5, 0 )
-            self.redoTheShieldSound = CurTime() + math.random( 10, 20 )
+            tbl.field_loopingSoundDummy = CreateSound( dummyEnd, "ambient/machines/combine_shield_loop3.wav" )
+            tbl.field_loopingSoundDummy:Play()
+            tbl.field_loopingSoundDummy:ChangeVolume( 0.5, 0 )
+            tbl.redoTheShieldSound = CurTime() + math.random( 10, 20 )
 
         end
-    elseif not self.shieldIsOn then
-        if self.field_loopingSound then
+    elseif not tbl.shieldIsOn then
+        if tbl.field_loopingSound then
             self:EmitSound( "campaign_entities/combineshield_deactivate.wav", 80, math.random( 95, 105 ) )
 
-            self.field_loopingSound:ChangeVolume( 0, 0 )
-            self.field_loopingSound:Stop()
-            self.field_loopingSound = nil
+            tbl.field_loopingSound:ChangeVolume( 0, 0 )
+            tbl.field_loopingSound:Stop()
+            tbl.field_loopingSound = nil
 
         end
-        if self.field_loopingSoundDummy and IsValid( dummyEnd ) then
+        if tbl.field_loopingSoundDummy and IsValid( dummyEnd ) then
             dummyEnd:EmitSound( "campaign_entities/combineshield_deactivate.wav", 80, math.random( 95, 105 ) )
 
-            self.field_loopingSoundDummy:ChangeVolume( 0, 0 )
-            self.field_loopingSoundDummy:Stop()
-            self.field_loopingSoundDummy = nil
+            tbl.field_loopingSoundDummy:ChangeVolume( 0, 0 )
+            tbl.field_loopingSoundDummy:Stop()
+            tbl.field_loopingSoundDummy = nil
 
         end
     end
@@ -428,6 +429,7 @@ function ENT:OnRemove()
 end
 
 local function isCombineModel( mdl )
+    if not mdl then return end
     local mdlLower = mdl:lower()
     if string.find( mdlLower, "combine" ) then return true end
     if string.find( mdlLower, "metrocop" ) then return true end

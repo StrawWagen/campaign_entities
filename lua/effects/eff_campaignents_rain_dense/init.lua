@@ -22,8 +22,26 @@ function EFFECT:Init( data )
     local upDist = 3000
     local minDist = 1000
 
-    if ply and ply.campaignEnts_NearestSkyPos then
-        distToSkyPos = ply.campaignEnts_NearestSkyPos:Distance( entsPos )
+    local fps = 1 / FrameTime()
+    local particleScale = 1
+    -- try and conserve fps
+    -- most of the lag comes from the rain particles, but this should help a lil bit 
+    if fps <= 30 then
+        maxDrops = maxDrops * 0.1
+        particleScale = particleScale * 1.9
+
+    elseif fps <= 45 then
+        maxDrops = maxDrops * 0.25
+        particleScale = particleScale * 1.75
+
+    elseif fps <= 75 then
+        maxDrops = maxDrops * 0.75
+        particleScale = particleScale * 1.25
+
+    end
+
+    if ply and ply.campaignents_NearestSkyPos then
+        distToSkyPos = ply.campaignents_NearestSkyPos:Distance( entsPos )
 
         upDist = math.Clamp( distToSkyPos, minDist, 6000 )
 
@@ -83,6 +101,9 @@ function EFFECT:Init( data )
             dropDir:Normalize()
 
         end
+
+        startSize = startSize * particleScale
+        endSize = endSize * particleScale
 
         local rollparticle = emitter:Add( particleTex, particlePos )
 

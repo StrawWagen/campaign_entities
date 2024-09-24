@@ -46,7 +46,6 @@ end
 function ENT:Initialize()
     if SERVER then
         self:SetModel( self.DefaultModel )
-        campaignents_doFadeDistance( self, 3500 )
 
         self:SetNoDraw( false )
         self:DrawShadow( false )
@@ -55,7 +54,9 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_WORLD ) -- npcs can see through?
         self:SetUseType( SIMPLE_USE )
 
-        self:GetPhysicsObject():EnableMotion( false )
+        CAMPAIGN_ENTS.doFadeDistance( self, 3500 )
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         self:AddEFlags( EFL_FORCE_CHECK_TRANSMIT )
 
     end
@@ -151,6 +152,7 @@ function ENT:Think()
 
         if posePos == 0.95 and targetPos == 1 then
             -- attempting a load!
+            CAMPAIGN_ENTS.weaponSpawnBlockerDontStrip = CurTime() + 5
             self:EmitSound( "plats/tram_hit1.wav", 0, 85, 1, CHAN_STATIC )
 
         end

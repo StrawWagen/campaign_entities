@@ -40,7 +40,7 @@ function ENT:SetupDataTables()
 
     if SERVER then
         self:NetworkVarNotify( "ActivationDist", function( _, _, _, new )
-            campaignents_TrackPlyProximity( self, new )
+            CAMPAIGN_ENTS.TrackPlyProximity( self, new )
 
         end )
 
@@ -149,7 +149,7 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
 
         self:GetPhysicsObject():SetMass( 50000 )
-        campaignEnts_EasyFreeze( self )
+        CAMPAIGN_ENTS.EasyFreeze( self )
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
@@ -240,7 +240,7 @@ function ENT:DoInternalWall( doWall )
         internalWall:SetModel( "models/props_combine/combineinnerwall001c.mdl" )
         internalWall:Spawn()
 
-        campaignEnts_EasyFreeze( internalWall )
+        CAMPAIGN_ENTS.EasyFreeze( internalWall )
 
         internalWall.PhysgunDisabled = true
         internalWall.DoNotDuplicate = true
@@ -255,12 +255,13 @@ local nextMessage = 0
 function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "I slowly advance when spawned into chains!\nI'll stop after 'stepping' two times!\nYou can config that though!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             MSG = "I'll only take 'steps' when a player is nearer than my ActivationDist, set it to max to disable this!\nUncheck DoIntenralWall to get rid of the barrier inside me!\nThis message will not appear when duped in."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         end )
         nextMessage = CurTime() + 25
@@ -307,14 +308,14 @@ function ENT:DecideToTakeAStep()
     if self.wasClosePly ~= true then
         local activationDist = self:GetActivationDist()
         if activationDist >= 11999 then
-            campaignents_StopTrackingPlyProximity( self )
+            CAMPAIGN_ENTS.StopTrackingPlyProximity( self )
             self.wasClosePly = true
             return
 
         end
 
         if not self.wasClosePly then self:DoStepLater() return end
-        campaignents_StopTrackingPlyProximity( self )
+        CAMPAIGN_ENTS.StopTrackingPlyProximity( self )
 
     end
 
@@ -357,7 +358,7 @@ local rate = { 0.0015, 0.01 }
 function ENT:Think()
     if not self:GetOn() then return end
 
-    local enabledAi = campaignents_EnabledAi()
+    local enabledAi = CAMPAIGN_ENTS.EnabledAi()
     if self.wasEnabledAi ~= enabledAi then
         self.wasEnabledAi = enabledAi
         self:DoStepLater()
@@ -402,11 +403,11 @@ function ENT:Think()
             end
             self:DoStepLater()
             if stepType == 1 then
-                self:EmitSound( "ambient/machines/wall_move5.wav", 85, 100, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
-                self:EmitSound( "ambient/machines/floodgate_stop1.wav", 83, 80, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
+                self:EmitSound( "ambient/machines/wall_move5.wav", 85, 100, 1, CHAN_STATIC, SND_NOFLAGS, 0, CAMPAIGN_ENTS.filterAllPlayers() )
+                self:EmitSound( "ambient/machines/floodgate_stop1.wav", 83, 80, 1, CHAN_STATIC, SND_NOFLAGS, 0, CAMPAIGN_ENTS.filterAllPlayers() )
 
             elseif stepType == 2 then
-                self:EmitSound( "ambient/machines/wall_move1.wav", 85, 100, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
+                self:EmitSound( "ambient/machines/wall_move1.wav", 85, 100, 1, CHAN_STATIC, SND_NOFLAGS, 0, CAMPAIGN_ENTS.filterAllPlayers() )
                 self:WallSlideStart()
 
             end
@@ -414,7 +415,7 @@ function ENT:Think()
 
         -- getting ready to drop!
         if fraction >= 0.35 and oldFraction <= 0.35 and stepType == 1 then
-            self:EmitSound( "ambient/machines/wall_move2.wav", 85, 95, 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
+            self:EmitSound( "ambient/machines/wall_move2.wav", 85, 95, 1, CHAN_STATIC, SND_NOFLAGS, 0, CAMPAIGN_ENTS.filterAllPlayers() )
 
         end
 
@@ -439,7 +440,7 @@ function ENT:Think()
             self.stepsTaken = self.stepsTaken + 1
 
             if stepType == 1 then
-                self:EmitSound( "ambient/machines/wall_crash1.wav", 95, 100 + math.random( -5, 5 ), 1, CHAN_STATIC, SND_NOFLAGS, 0, campaignents_filterAllPlayers() )
+                self:EmitSound( "ambient/machines/wall_crash1.wav", 95, 100 + math.random( -5, 5 ), 1, CHAN_STATIC, SND_NOFLAGS, 0, CAMPAIGN_ENTS.filterAllPlayers() )
                 self:WallLand()
 
             end
@@ -500,7 +501,7 @@ function ENT:ResetSteps()
     self:DoStepLater()
     self.takingAStep = false
     self.wasClosePly = false
-    campaignents_TrackPlyProximity( self, self:GetActivationDist() )
+    CAMPAIGN_ENTS.TrackPlyProximity( self, self:GetActivationDist() )
     self.stepsTaken = 0
     if not WireLib then return end
     Wire_TriggerOutput( self, "StepsTaken", self.stepsTaken )

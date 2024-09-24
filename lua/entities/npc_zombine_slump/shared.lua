@@ -13,6 +13,7 @@ ENT.MyClass = "npc_zombine_slump"
 ENT.ModelToPrecache = "models/zombie/zombie_soldier.mdl"
 ENT.AmbusherClass = "npc_zombine"
 
+ENT.SnapBehind = true
 ENT.Slump = "slump_a"
 ENT.RiseStyle = { "slumprise_a", "slumprise_a2" }
 
