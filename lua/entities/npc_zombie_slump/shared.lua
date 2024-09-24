@@ -12,6 +12,7 @@ ENT.MyClass = "npc_zombie_slump"
 ENT.ModelToPrecache = "models/Zombie/Classic.mdl"
 ENT.AmbusherClass = "npc_zombie"
 
+ENT.SnapBehind = true
 ENT.Slump = "slump_a"
 ENT.RiseStyle = { "slumprise_a", "slumprise_a2" }
 
@@ -22,7 +23,6 @@ ENT.HintSounds = {
     "npc/zombie/zombie_voice_idle4.wav",
 
 }
-
 
 function ENT:Ambush()
     if not IsValid( self.waking_sequence ) then return end

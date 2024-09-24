@@ -187,7 +187,6 @@ end
 function ENT:Initialize()
     if SERVER then
         self:SetModel( self.Model )
-        campaignents_doFadeDistance( self, 5000 )
 
         self:SetMaterial( self.Material )
         self:SetNoDraw( false )
@@ -195,6 +194,9 @@ function ENT:Initialize()
         self:SetMoveType( MOVETYPE_VPHYSICS )
         self:PhysicsInit( SOLID_VPHYSICS )
         self:SetCollisionGroup( COLLISION_GROUP_WORLD )
+
+        CAMPAIGN_ENTS.EasyFreeze( self )
+        CAMPAIGN_ENTS.doFadeDistance( self, 5000 )
 
         if WireLib then
             self.Inputs = WireLib.CreateSpecialInputs( self, { "On", "SoundPath" }, { "NORMAL", "STRING" } )
@@ -579,7 +581,7 @@ end
 function ENT:debugVisThink()
     if not CLIENT then return end
     if self:IsDormant() then return end
-    local inDevMode = campaignents_IsEditing()
+    local inDevMode = CAMPAIGN_ENTS.IsEditing()
     if self:GetNoDraw() == true then -- not drawing
         if inDevMode then
             self:Reveal()

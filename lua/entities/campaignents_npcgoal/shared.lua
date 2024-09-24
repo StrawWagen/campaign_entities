@@ -15,13 +15,13 @@ ENT.DefaultModel = "models/hunter/plates/plate05x05.mdl"
 
 function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    0, "IsWorthDyingFor",   { KeyName = "isworthdyingfor",  Edit = { type = "Bool", order = 1 } } )
-    self:NetworkVar( "Int",     0, "GoalID",            { KeyName = "goalid",           Edit = { type = "Int",  order = 2, min = -1, max = 1000 } } )
+    self:NetworkVar( "Int",     0, "GoalID",            { KeyName = "goalid",           Edit = { type = "Int",  order = 2, min = -1, max = 10000 } } )
 
     self:NetworkVarNotify( "GoalID", function( _, _, _, _ )
         if not CLIENT then return end
         if not IsValid( self ) then return end
 
-        campaignents_DoBeamColor( self )
+        CAMPAIGN_ENTS.DoBeamColor( self )
 
     end )
     self:NetworkVarNotify( "IsWorthDyingFor", function( _, _, old, new )
@@ -32,11 +32,11 @@ function ENT:SetupDataTables()
         if old == new then return end
 
         local MSG = "NPC Goal: Reload the save for IsWorthDyingFor changes to apply. ( crash prevention. )"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         if new == true then
             MSG = "IsWorthDyingFor Is set to true...\nNPCS will blindly attack this goal.\nThrow away their life just at the slim chance they will glance upon it...."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         end
     end )
@@ -64,8 +64,10 @@ function ENT:Initialize()
         self:PhysicsInit( SOLID_VPHYSICS )
         self:SetCollisionGroup( COLLISION_GROUP_DEBRIS_TRIGGER )
         self:SetMaterial( "phoenix_storms/bluemetal" )
-        campaignents_doFadeDistance( self, 3000 )
-        campaignEnts_EasyFreeze( self )
+
+        CAMPAIGN_ENTS.doFadeDistance( self, 3000 )
+        CAMPAIGN_ENTS.StartUglyHiding( self )
+        CAMPAIGN_ENTS.EasyFreeze( self )
 
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
@@ -74,7 +76,7 @@ function ENT:Initialize()
         end )
 
     else
-        campaignents_DoBeamColor( self )
+        CAMPAIGN_ENTS.DoBeamColor( self )
 
     end
 end
@@ -84,12 +86,13 @@ function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextMessage > CurTime() then return end
 
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "Noclip and edit me!\nDrag me into a thing respawner for EZPZ mode!\nBut, a technical explanation,\nif my GoalID matches the GoalID of a thing respawner,\nI'll try and make any npcs it spawns, run to me!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             MSG = "The short line above me is the direction combine soldiers will face!\nThis will not appear when duped in."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         end )
 
@@ -108,17 +111,14 @@ if CLIENT then
     local beamMat = Material( "sprites/physbeama" )
 
     function ENT:Draw()
-        if campaignents_IsEditing() or not campaignents_EnabledAi() then
-            if not campaignents_CanBeUgly() then return end
-            self:DrawModel()
+        self:DrawModel()
 
-            local up = self:GetUp()
-            local forwardIndStart = self:GetPos() + up * 25
-            local forwardIndEnd = forwardIndStart + self:GetForward() * 50
-            render.SetMaterial( beamMat )
-            render.DrawBeam( forwardIndStart, forwardIndEnd, 20, 0, 0.1, self.GoalLinkColor )
+        local up = self:GetUp()
+        local forwardIndStart = self:GetPos() + up * 25
+        local forwardIndEnd = forwardIndStart + self:GetForward() * 50
+        render.SetMaterial( beamMat )
+        render.DrawBeam( forwardIndStart, forwardIndEnd, 20, 0, 0.1, self.GoalLinkColor )
 
-        end
     end
 end
 
@@ -171,10 +171,10 @@ function ENT:Think()
     if self:IsPlayerHolding() then
         if not printedMessage then
             printedMessage = true
-            campaignents_MessageOwner( self, "NPC Goal: Drag me into a respawner so i can copy it's GoalID!" )
+            CAMPAIGN_ENTS.MessageOwner( self, "NPC Goal: Drag me into a respawner so i can copy it's GoalID!" )
 
         end
-        campaignents_captureGoalID( self )
+        CAMPAIGN_ENTS.captureGoalID( self )
 
     end
 

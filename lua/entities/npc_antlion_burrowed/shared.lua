@@ -61,7 +61,7 @@ function ENT:SetupDataTables()
             if not SERVER then return end
             if not IsValid( self ) then return end
 
-            campaignents_TrackPlyProximity( self, new )
+            CAMPAIGN_ENTS.TrackPlyProximity( self, new )
 
         end )
 
@@ -82,16 +82,6 @@ end
 function ENT:PostSetupData()
 end
 
-if CLIENT then
-    function ENT:Draw()
-        if campaignents_IsEditing() or not campaignents_EnabledAi() then
-            if not campaignents_CanBeUgly() then return end
-            self:DrawModel()
-
-        end
-    end
-end
-
 if not SERVER then return end
 
 function ENT:Initialize()
@@ -104,8 +94,14 @@ function ENT:Initialize()
 
     end
 
-    if campaignents_EnabledAi() then
-        self:CreateAmbusher()
+    CAMPAIGN_ENTS.StartUglyHiding( self )
+
+    if CAMPAIGN_ENTS.EnabledAi() then
+        timer.Simple( 0, function()
+            if not IsValid( self ) then return end
+            self:CreateAmbusher()
+
+        end )
     end
 
     if not WireLib then return end
@@ -165,7 +161,7 @@ function ENT:Think()
         end
     end
     -- let them physgun us!
-    if not campaignents_EnabledAi() then
+    if not CAMPAIGN_ENTS.EnabledAi() then
         if not IsValid( self:GetPhysicsObject() ) then
             self:SetMoveType( MOVETYPE_VPHYSICS )
             self:PhysicsInit( SOLID_VPHYSICS )
@@ -218,8 +214,8 @@ function ENT:Think()
 
     --debugoverlay.Sphere( myPos, ambushDist, 5, color_white, true )
 
-    local waker = campaignEnts_PlyInProxmity( self )
-    if not campaignents_IgnoringPlayers() and IsValid( waker ) and self:CampaignEnts_ProximityFilter( waker ) then
+    local waker = CAMPAIGN_ENTS.PlyInProxmity( self )
+    if not CAMPAIGN_ENTS.IgnoringPlayers() and IsValid( waker ) and self:CampaignEnts_ProximityFilter( waker ) then
         doAmbush = true
 
     end
@@ -323,8 +319,24 @@ function ENT:AwakenTeammates()
     end
 end
 
+-- make it the same material, color as me
+function ENT:TransferStuffTo( newThing )
+    local myColor = self:GetColor()
+    if myColor ~= self.DebugColor then
+        newThing:SetColor( myColor )
+
+    end
+    local myMaterial = self:GetMaterial()
+    if myMaterial ~= self.Material then
+        newThing:SetMaterial( myMaterial )
+
+    end
+end
+
 function ENT:CreateAmbusher()
     self.ambusher = self:InitializeAmbusher()
+
+    self:TransferStuffTo( self.ambusher )
 
     if not IsValid( self.ambusher ) then return end
     self.ambusher.DoNotDuplicate = true
@@ -340,10 +352,17 @@ function ENT:CreateAmbusher()
 
 end
 
+function ENT:OnDuplicated()
+    self.ambusher = nil
+
+end
+
 -- modifiable funcs below
 
 function ENT:InitializeAmbusher()
     local ambusher = ents.Create( self.AmbusherClass )
+    if not IsValid( ambusher ) then return end
+
     ambusher:SetPos( self:GetPos() )
     ambusher:SetAngles( self:GetAngles() )
     ambusher:SetKeyValue( "spawnflags", bit.bor( SF_NPC_FADE_CORPSE ) )

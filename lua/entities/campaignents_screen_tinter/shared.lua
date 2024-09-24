@@ -31,9 +31,10 @@ function ENT:SetupDataTables()
 end
 
 function ENT:BestowerSetup()
+    CAMPAIGN_ENTS.EnsureOnlyOneExists( self )
+
     self:AddEFlags( EFL_FORCE_CHECK_TRANSMIT )
     self:SetMaterial( "models/campaignents/cube_tinter" )
-    self:EnsureOnlyOneExists()
 
     timer.Simple( 0, function()
         if not IsValid( self ) then return end
@@ -62,11 +63,11 @@ local nextTinterMessage = 0
 function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextTinterMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "I'm like a 0 distance fog editor!\nBut i tint equipped weapons too!\nCheck my context menu!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         MSG = "This message will not appear when duped in."
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         nextTinterMessage = CurTime() + 25
 
@@ -85,22 +86,22 @@ end
 
 if not CLIENT then return end
 
-local campaignEnts_ScreenTint = nil
+local campaignents_ScreenTint = nil
 local campaingEnts_ScreenAlpha = nil
 local doneSomething = 0
 
 function ENT:OnRemove()
-    if self.overRidden then return end
-    campaignEnts_ScreenTint = nil
-    campaignEnts_ScreenAlpha = nil
+    if self.campaignents_Overriden then return end
+    campaignents_ScreenTint = nil
+    campaignents_ScreenAlpha = nil
 
 end
 
 function ENT:Think()
     local myTint = self:GetTintColor()
     local myAlpha = self:GetTintAlpha()
-    if not campaignEnts_ScreenTint or campaignEnts_ScreenTint ~= myTint then
-        campaignEnts_ScreenTint = myTint * 255
+    if not campaignents_ScreenTint or campaignents_ScreenTint ~= myTint then
+        campaignents_ScreenTint = myTint * 255
         doneSomething = 5000
 
     end
@@ -126,8 +127,8 @@ local surface_SetDrawColor  = surface.SetDrawColor
 local surface_DrawRect      = surface.DrawRect
 
 hook.Add( "PreDrawHUD", "campaignents_screentinter_tint", function()
-    if not campaignEnts_ScreenTint then return end
-    surface_SetDrawColor( campaignEnts_ScreenTint[1], campaignEnts_ScreenTint[2], campaignEnts_ScreenTint[3], campaingEnts_ScreenAlpha )
+    if not campaignents_ScreenTint then return end
+    surface_SetDrawColor( campaignents_ScreenTint[1], campaignents_ScreenTint[2], campaignents_ScreenTint[3], campaingEnts_ScreenAlpha )
     surface_DrawRect( -_ScrW() * 0.5, -_ScrH() * 0.5, _ScrW(), _ScrH() )
 
 end )

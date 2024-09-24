@@ -27,14 +27,14 @@ end
 function ENT:Initialize()
     self:SetModel( "models/props_lab/tpplugholder_single.mdl" )
 
-    campaignents_doFadeDistance( self, 3000 )
+    CAMPAIGN_ENTS.doFadeDistance( self, 3000 )
 
     self:PhysicsInit( SOLID_VPHYSICS )
     self:SetMoveType( MOVETYPE_VPHYSICS )
     self:SetSolid( SOLID_VPHYSICS )
 
     -- stop annoying bouncing off plug, when plugged after spawning!
-    campaignEnts_EasyFreeze( self )
+    CAMPAIGN_ENTS.EasyFreeze( self )
 
     if not WireLib then return end
 

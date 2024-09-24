@@ -28,12 +28,11 @@ function ENT:SetupDataTables()
     end
 end
 
-local campaignents_RainSpawner = nil
+local campaignents_RainSpawner
 
 function ENT:BestowerSetup()
     self:AddEFlags( EFL_FORCE_CHECK_TRANSMIT )
     self:SetMaterial( "models/campaignents/cube_rain" )
-    self:EnsureOnlyOneExists()
 
     game.AddParticles( "particles/forest_dynamic_rain_modified.pcf" )
     PrecacheParticleSystem( "forest_particle_rain_campaignents" )
@@ -60,14 +59,14 @@ end
 local nextTinterMessage = 0
 
 function ENT:SelfSetup()
-    campaignents_RainSpawner = self
+    campaignents_RainSpawner = CAMPAIGN_ENTS.EnsureOnlyOneExists( self )
     if self.duplicatedIn then return end
     if nextTinterMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "I spawn in some modified rain!\nSounds included!\nI recommend spawning in some fog, maybe tint the player's screen?"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         MSG = "This message will not appear when duped in."
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         nextTinterMessage = CurTime() + 25
 
@@ -108,7 +107,7 @@ end
 if not CLIENT then return end
 
 local function traceIsSky( tr )
-    if tr.HitSky or ( not tr.Hit and not tr.StartSolid ) then return true end 
+    if tr.HitSky or ( not tr.Hit and not tr.StartSolid ) then return true end
 
 end
 
@@ -201,14 +200,14 @@ local function getBestRaindrop( startPos, targetPos )
 
 end
 
-local campaignEnts_rainIntensity = 0
+local campaignents_rainIntensity = 0
 local doneSomething = 0
 local particleEffecting = false
 local nextFarRain = 0
 
 function ENT:OnRemove()
-    if self.overRidden then return end
-    campaignEnts_rainIntensity = 0
+    if self.campaignents_Overriden then return end
+    campaignents_rainIntensity = 0
     particleEffecting = false
 
 end
@@ -219,16 +218,16 @@ function ENT:Think()
 
     end
     local myIntensity = self:GetIntensity()
-    if not campaignEnts_rainIntensity or campaignEnts_rainIntensity ~= myIntensity then
-        campaignEnts_rainIntensity = math.Approach( campaignEnts_rainIntensity, myIntensity, self:GetResponsiveness() / 500 )
+    if not campaignents_rainIntensity or campaignents_rainIntensity ~= myIntensity then
+        campaignents_rainIntensity = math.Approach( campaignents_rainIntensity, myIntensity, self:GetResponsiveness() / 500 )
         doneSomething = 500
 
     end
-    if campaignEnts_rainIntensity > 0 and particleEffecting ~= true then
+    if campaignents_rainIntensity > 0 and particleEffecting ~= true then
         ParticleEffect( "forest_particle_rain_campaignents", self:GetPos(), Angle( 0,0,0 ), self )
         particleEffecting = true
 
-    elseif campaignEnts_rainIntensity <= 0 and particleEffecting == true then
+    elseif campaignents_rainIntensity <= 0 and particleEffecting == true then
         self:StopParticleEmission()
         particleEffecting = false
 
@@ -245,17 +244,17 @@ function ENT:Think()
 end
 
 hook.Add( "Think", "campaignents_rain_farrain", function()
-    if campaignEnts_rainIntensity <= 0 then return end
+    if campaignents_rainIntensity <= 0 then return end
     if nextFarRain > CurTime() then return end
     if not IsValid( campaignents_RainSpawner ) then return end
     if not campaignents_RainSpawner:GetLongDistFx() then return end
 
-    local divisor = math.max( 1.5, campaignEnts_rainIntensity )
+    local divisor = math.max( 1.5, campaignents_rainIntensity )
     nextFarRain = CurTime() + ( math.Rand( 0.75, 0.95 ) / divisor )
 
     local rain = EffectData()
     rain:SetEntity( LocalPlayer() )
-    rain:SetScale( campaignEnts_rainIntensity )
+    rain:SetScale( campaignents_rainIntensity )
     util.Effect( "eff_campaignents_rain_dense", rain )
 
 end )
@@ -306,7 +305,7 @@ local function addSoundsForIntensity( sounds, currIntensity, maxVolume )
 end
 
 hook.Add( "Think", "campaignents_rainaudio_think", function()
-    if campaignEnts_rainIntensity <= 0 then return end
+    if campaignents_rainIntensity <= 0 then return end
 
     local cur = CurTime()
     local ply = LocalPlayer()
@@ -317,14 +316,14 @@ hook.Add( "Think", "campaignents_rainaudio_think", function()
     -- if we are directly under the sky then just make rain noise
     local _, skyTrBasic = PosCanSee( shootPos, shootPos + upOffset, ply, MASK_SHOT )
     if traceIsSky( skyTrBasic ) then
-        ply.campaignEnts_NearestSkyPos = skyTrBasic.HitPos
-        addSoundsForIntensity( inTheRainSound, campaignEnts_rainIntensity, 1.25 )
+        ply.campaignents_NearestSkyPos = skyTrBasic.HitPos
+        addSoundsForIntensity( inTheRainSound, campaignents_rainIntensity, 1.25 )
         return
 
     end
 
-    local nearestSky = ply.campaignEnts_NearestSkyPos
-    local nextSkyUpdate = ply.campaignEnts_NextNearestSkyUpdate or 0
+    local nearestSky = ply.campaignents_NearestSkyPos
+    local nextSkyUpdate = ply.campaignents_NextNearestSkyUpdate or 0
 
     local timeBetweenChecksMulInt = timeBetweenChecksMul
     if ply.campaignents_RainOldPos and ( shootPos - ply.campaignents_RainOldPos ):LengthSqr() < 0.1 then
@@ -337,18 +336,18 @@ hook.Add( "Think", "campaignents_rainaudio_think", function()
         local theNearestSky = getSkyOfPos( shootPos + velOffs )
         if theNearestSky then
             nearestSky = theNearestSky
-            ply.campaignEnts_NearestSkyPos = nearestSky
-            ply.campaignEnts_NextNearestSkyUpdate = CurTime() + ( 0.15 * timeBetweenChecksMulInt )
+            ply.campaignents_NearestSkyPos = nearestSky
+            ply.campaignents_NextNearestSkyUpdate = CurTime() + ( 0.15 * timeBetweenChecksMulInt )
 
         end
     end
 
     if not nearestSky then return end
 
-    local nearestRainLand = ply.campaignEnts_NearestRainLand
-    local nearestLandDist = ply.campaignEnts_NearestRainLandDist
-    local nearestLandHasLos = ply.campaignEnts_nearestLandHasLos
-    local nextRainLandUpdate = ply.campaignEnts_NextNearestRainLandUpdate or 0
+    local nearestRainLand = ply.campaignents_NearestRainLand
+    local nearestLandDist = ply.campaignents_NearestRainLandDist
+    local nearestLandHasLos = ply.campaignents_nearestLandHasLos
+    local nextRainLandUpdate = ply.campaignents_NextNearestRainLandUpdate or 0
 
     if not nearestRainLand or nextRainLandUpdate < cur then
         abovePlayerAtSkyHeight.z = nearestSky.z
@@ -378,21 +377,21 @@ hook.Add( "Think", "campaignents_rainaudio_think", function()
 
         if theNearestRainLand and not breakingLos then
             nearestRainLand = theNearestRainLand
-            ply.campaignEnts_NearestRainLand = nearestRainLand
+            ply.campaignents_NearestRainLand = nearestRainLand
 
             --debugoverlay.Cross( nearestRainLand, 10, 10, color_white, true )
 
             nearestLandDist = theNearestLandDist
-            ply.campaignEnts_NearestRainLandDist = nearestLandDist
+            ply.campaignents_NearestRainLandDist = nearestLandDist
 
             nearestLandHasLos = theNearestLandHasLos
-            ply.campaignEnts_nearestLandHasLos = nearestLandHasLos
+            ply.campaignents_nearestLandHasLos = nearestLandHasLos
 
-            ply.campaignEnts_NextNearestRainLandUpdate = CurTime() + ( 0.08 * timeBetweenChecksMulInt )
+            ply.campaignents_NextNearestRainLandUpdate = CurTime() + ( 0.08 * timeBetweenChecksMulInt )
 
         else
             nearestLandDist = shootPos:Distance( nearestRainLand )
-            ply.campaignEnts_NearestRainLandDist = nearestLandDist
+            ply.campaignents_NearestRainLandDist = nearestLandDist
 
         end
     end
@@ -413,7 +412,7 @@ hook.Add( "Think", "campaignents_rainaudio_think", function()
         local _, traceToRainPos = PosCanSee( shootPos, nearestRainLand + aboveGround, ply, MASK_SHOT )
         local _, traceFromRainPos = PosCanSee( nearestRainLand + aboveGround, shootPos, ply, MASK_SHOT )
         local scaled = ( distScalar - 0.3 ) ^ 0.8
-        addSoundsForIntensity( underAwningSound, campaignEnts_rainIntensity, scaled / 2 )
+        addSoundsForIntensity( underAwningSound, campaignents_rainIntensity, scaled / 2 )
 
         -- thin roof/wall!
         if traceToRainPos.HitPos:Distance( traceFromRainPos.HitPos ) < 30 then
@@ -422,11 +421,11 @@ hook.Add( "Think", "campaignents_rainaudio_think", function()
         end
 
     elseif nearestLandHasLos and not inTheRain then
-        addSoundsForIntensity( inTheRainSound, campaignEnts_rainIntensity, distScalar - 0.5 )
-        addSoundsForIntensity( underAwningSound, campaignEnts_rainIntensity, distScalar )
+        addSoundsForIntensity( inTheRainSound, campaignents_rainIntensity, distScalar - 0.5 )
+        addSoundsForIntensity( underAwningSound, campaignents_rainIntensity, distScalar )
 
     elseif nearestLandHasLos and inTheRain then
-        addSoundsForIntensity( inTheRainSound, campaignEnts_rainIntensity, 1.25 )
+        addSoundsForIntensity( inTheRainSound, campaignents_rainIntensity, 1.25 )
 
     end
 end )

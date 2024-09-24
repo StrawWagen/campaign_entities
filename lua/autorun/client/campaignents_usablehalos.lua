@@ -32,7 +32,7 @@ hook.Add( "PreDrawHalos", "saveentities_usablehalos", function()
     if tr.HitWorld then return end
     if not ent.campaignents_Usable then return end
     if _LocalPlayer():GetShootPos():DistToSqr( tr.HitPos ) > disSqr then return end
-    if not campaignents_CanBeUgly() then return end
+    if not CAMPAIGN_ENTS.CanBeUgly() then return end
 
     halo.Add( { ent }, haloColor() )
 

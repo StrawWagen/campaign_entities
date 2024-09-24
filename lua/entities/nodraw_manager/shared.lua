@@ -14,9 +14,11 @@ ENT.Editable = true
 ENT.Model = "models/props_lab/monitor02.mdl"
 ENT.Material = "models/xqm/squaredmatinverted"
 
+local STRAW_NodrawManager
+
 local function ActiveNodrawManager()
     if not IsValid( STRAW_NodrawManager ) then return end
-    if not campaignents_EnabledAi() then return end
+    if not CAMPAIGN_ENTS.EnabledAi() then return end
     return STRAW_NodrawManager
 
 end
@@ -50,6 +52,8 @@ function ENT:Initialize()
         self:SetCollisionGroup( COLLISION_GROUP_NONE )
         self:SetMaterial( self.Material )
 
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
             self:SelfSetup()
@@ -58,25 +62,16 @@ function ENT:Initialize()
     end
 end
 
-function ENT:EnsureOnlyOneExists()
-    if IsValid( STRAW_NodrawManager ) and STRAW_NodrawManager ~= self then
-        SafeRemoveEntity( STRAW_NodrawManager )
-
-    end
-    STRAW_NodrawManager = self
-
-end
-
 local nextNodrawMessage = 0
 function ENT:SelfSetup()
-    self:EnsureOnlyOneExists()
+    STRAW_NodrawManager = CAMPAIGN_ENTS.EnsureOnlyOneExists( self )
     if not ActiveNodrawManager() then return end
     if self.duplicatedIn then return end
     if nextNodrawMessage > CurTime() then return end
 
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "I make stuff stop rendering for people and work best with a fog editor, distance is configurable. You can also configure the max thing size, so big things don't just dissapear from the skyline!\nThis message will not appear when duped."
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         nextNodrawMessage = CurTime() + 25
 
     end
@@ -94,6 +89,7 @@ function ENT:RefreshTable()
 
     end
     OperateIndex = 0
+
 end
 
 local function Positions( Players )
@@ -109,17 +105,18 @@ end
 
 function ENT:Operate( CurrentCount, FixingAllTramsit )
     local Players           = player.GetAll()
-    local CheckDistSqr      = self:GetNodrawDistance() ^ 2
     local PlayerPositions   = Positions( Players )
+    if not PlayerPositions then return end
+    local CheckDistSqr      = self:GetNodrawDistance() ^ 2
     local Start             = OperateIndex
     local End               = math.Clamp( OperateIndex + self:GetRate(), 0, CurrentCount )
+    local MaxRadius         = self:GetMaxRadius()
     if FixingAllTramsit then
         End = #StuffToOperate
 
     end
-    if not PlayerPositions then return end
     for Ind = Start, End do
-        self:ManageEntNodraw( StuffToOperate[Ind], Players, PlayerPositions, CheckDistSqr, FixingAllTramsit )
+        self:ManageEntNodraw( StuffToOperate[Ind], Players, PlayerPositions, CheckDistSqr, FixingAllTramsit, MaxRadius )
 
     end
     OperateIndex = End
@@ -143,12 +140,12 @@ local classBlacklist = {
 }
 
 
-function ENT:ManageEntNodraw( Thing, Players, PlayerPositions, CheckDistSqr, FixingAllTramsit )
+function ENT:ManageEntNodraw( Thing, Players, PlayerPositions, CheckDistSqr, FixingAllTramsit, Radius )
     if not IsValid( Thing ) then return end
-    if not isfunction( Thing.GetPos ) then return end -- custom entities????? idfk
+    if not Thing.GetPos then return end -- custom entities????? idfk
     if Thing:GetNoDraw() == true then return end
     if IsValid( Thing:GetParent() ) then return end
-    if AboveRadius( Thing, self:GetMaxRadius() ) then return end
+    if AboveRadius( Thing, Radius ) then return end
     if classBlacklist[ Thing:GetClass() ] then return end
     self:DoDrawing( Thing, Players, PlayerPositions, CheckDistSqr, FixingAllTramsit )
 
@@ -160,12 +157,18 @@ local recursivePreventExtent = 0
 local function RecursiveSetPreventTransmit( Thing, Player, StopTransmitting )
     if not IsValid( Thing ) or not IsValid( Player ) then return end
     if Player == Thing then return end
+    if StopTransmitting == Thing:GetPreventTransmit( Player ) then return end
     if recursivePreventExtent > 500 then return end
     recursivePreventExtent = recursivePreventExtent + 1
 
     if not Thing.UpdateTransmitState or Thing:UpdateTransmitState() ~= TRANSMIT_ALWAYS then
-        Thing:SetPreventTransmit( Player, StopTransmitting )
+        if StopTransmitting then
+            Thing:AddPreventTransmitReason( Player, "campents_nodraw_manager" )
 
+        else
+            Thing:RemovePreventTransmitReason( Player, "campents_nodraw_manager" )
+
+        end
     end
 
     if not isfunction( Thing.GetChildren ) then return end
@@ -186,7 +189,7 @@ function ENT:DoDrawing( Thing, Players, PlayerPositions, CheckDistSqr, FixingAll
         local WithinDistance = DistanceSqr < CheckDistSqr
 
         if not DrawStates[ CreationId ] then
-            DrawStates[ CreationId ] = false
+            DrawStates[ CreationId ] = Thing:GetPreventTransmit()
 
         end
         if WithinDistance or FixingAllTramsit then

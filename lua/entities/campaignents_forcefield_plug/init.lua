@@ -17,7 +17,7 @@ function ENT:Initialize()
 
     self:SetupSessionVars()
     self:SetModel( "models/props_lab/tpplug.mdl" )
-    campaignents_doFadeDistance( self, 3000 )
+    CAMPAIGN_ENTS.doFadeDistance( self, 3000 )
 
     local phys = self:GetPhysicsObject()
     if phys and phys:IsValid() then
@@ -80,6 +80,7 @@ function ENT:TryToUnplug()
 
     self.Shield_CanPlug = false
     timer.Simple( 0.5, function()
+        if not IsValid( self ) then return end
         self.Shield_CanPlug = true
     end )
 

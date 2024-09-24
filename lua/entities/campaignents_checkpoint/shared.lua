@@ -12,7 +12,6 @@ ENT.AdminOnly   = true
 
 ENT.Editable    = true
 ENT.DefaultModel = "models/hunter/blocks/cube2x2x025.mdl"
-ENT.campaignents_Usable = true
 
 function ENT:SetupDataTables()
     self:NetworkVar( "Bool",    0, "CanOverride",    { KeyName = "canbeoverriden",   Edit = { type = "Bool", title = "Let respawn manager override?", order = 1 } } )
@@ -34,10 +33,12 @@ if CLIENT then
         if self.checkpointWasMe ~= isMe then
             if isMe then
                 self.checkpointWasMe = true
+                colorGreen[4] = self:GetColor()[4]
                 self:SetColor( colorGreen )
 
             else
                 self.checkpointWasMe = false
+                colorRed[4] = self:GetColor()[4]
                 self:SetColor( colorRed )
 
             end
@@ -66,7 +67,8 @@ function ENT:Initialize()
         self:SetUseType( SIMPLE_USE )
         self:SetMaterial( "phoenix_storms/stripes" )
 
-        campaignEnts_EasyFreeze( self )
+        CAMPAIGN_ENTS.EasyFreeze( self )
+
         timer.Simple( 0, function()
             if not IsValid( self ) then return end
             self:SelfSetup()
@@ -79,12 +81,13 @@ local nextMessage = 0
 function ENT:SelfSetup()
     if self.duplicatedIn then return end
     if nextMessage > CurTime() then return end
-    if campaignents_EnabledAi() then
+    if CAMPAIGN_ENTS.EnabledAi() then
         local MSG = "If people touch me, they'll respawn on top of me!"
-        campaignents_MessageOwner( self, MSG )
+        CAMPAIGN_ENTS.MessageOwner( self, MSG )
         timer.Simple( 0, function()
+            if not IsValid( self ) then return end
             MSG = "This message will not appear when duped in."
-            campaignents_MessageOwner( self, MSG )
+            CAMPAIGN_ENTS.MessageOwner( self, MSG )
 
         end )
         nextMessage = CurTime() + 25

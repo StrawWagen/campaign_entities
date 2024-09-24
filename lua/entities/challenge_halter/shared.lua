@@ -39,7 +39,7 @@ function ENT:SpawnFunction( _, tr, class )
 
     ent:Spawn()
 
-    campaignEnts_EasyFreeze( ent )
+    CAMPAIGN_ENTS.EasyFreeze( ent )
 
     return ent
 
@@ -87,12 +87,17 @@ function ENT:CelebrateWith( ply )
 end
 
 function ENT:OnRemove()
-    if self.overRidden then return end
+    if self.campaignents_Overriden then return end
     for _, currentplayer in pairs( player.GetAll() ) do
         if currentplayer:GetNWBool( "challengeHalterBlockingNoclip" ) then
             self:ReturnNoclipTo( currentplayer )
-            currentplayer:PrintMessage( HUD_PRINTCENTER, "The Noclip granter is no more. It feels like you could sprout wings and take off.." )
+            local ourClass = self:GetClass()
+            timer.Simple( 1, function()
+                -- dont do this when save is reloaded!
+                if CAMPAIGN_ENTS.OneThatExists( ourClass ) then return end
+                currentplayer:PrintMessage( HUD_PRINTCENTER, "The Noclip granter is no more. It feels like you could sprout wings and take off.." )
 
+            end )
         end
     end
 end
@@ -109,7 +114,9 @@ end
 
 
 function ENT:BestowerSetup()
-    self:EnsureOnlyOneExists()
+
+    CAMPAIGN_ENTS.EnsureOnlyOneExists( self )
+
     challengeNoclipHalter = self
     for _, currentplayer in pairs( player.GetAll() ) do
         self:ManageNoclippingOfPly( currentplayer )
@@ -182,8 +189,8 @@ end
 
 hook.Add( "PlayerNoClip", "challenge_noclip_halter", function( ply, desiredState )
     if not ply:GetNWBool( "challengeHalterBlockingNoclip" ) then return end
-    if not campaignents_EnabledAi() then return end
-    if campaignents_IsFreeMode() then return end
+    if not CAMPAIGN_ENTS.EnabledAi() then return end
+    if CAMPAIGN_ENTS.IsFreeMode() then return end
     local exiting = desiredState == false
     if exiting then
         return true -- always allow
@@ -194,10 +201,10 @@ hook.Add( "PlayerNoClip", "challenge_noclip_halter", function( ply, desiredState
     end
 end )
 
-hook.Add( "PlayerSpawn", "challenge_noclip_disablenoclip", function( Player )
+hook.Add( "PlayerSpawn", "challenge_noclip_disablenoclip", function( ply )
     if not IsValid( challengeNoclipHalter ) then return end
 
-    challengeNoclipHalter:ManageNoclippingOfPly( Player )
+    challengeNoclipHalter:ManageNoclippingOfPly( ply )
 
 end )
 
