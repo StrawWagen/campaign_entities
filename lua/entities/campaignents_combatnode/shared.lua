@@ -14,6 +14,8 @@ if not SERVER then return end
 
 ENT.DefaultModel = "models/props_phx/games/chess/white_dama.mdl"
 
+local CurTime = CurTime
+
 local shootinMask = MASK_SHOT
 local movementGroup = COLLISION_GROUP_NPC
 
@@ -49,6 +51,39 @@ local function IsntBlocked( startPos, endPos, filter )
 
 end
 
+local cachedScale = 0
+local nextCache = 0
+
+local function lagScale()
+    if nextCache > CurTime() then return cachedScale end
+
+    local simTime = physenv.GetLastSimulationTime() * 1000
+    nextCache = CurTime() + 0.01
+
+    if simTime < 0.1 then
+        cachedScale = 1
+
+    elseif simTime < 0.15 then
+        cachedScale = 1.5
+
+    elseif simTime < 0.2 then
+        cachedScale = 2
+
+    elseif simTime >= 0.25 then
+        cachedScale = 3
+
+    end
+    return cachedScale
+
+end
+
+local math_Rand = math.Rand
+
+local function randScaled( min, max )
+    return math_Rand( min, max ) * lagScale()
+
+end
+
 local function CanSeeOrHitNpc( startPos, endPos, filter, mask )
     local noHit, trace = PosCanSee( startPos, endPos, filter, mask )
     if noHit then return true end
@@ -63,8 +98,8 @@ function ENT:SetupSessionVars()
 
 end
 
-local defaultMat = "models/props_lab/xencrystal_sheet"
-local blockedMat = "effects/flashlight/square"
+local defaultMat = "models/weapons/v_slam/new light2"
+local blockedMat = "models/weapons/v_slam/new light1"
 
 function ENT:Initialize()
     if SERVER then
@@ -188,7 +223,7 @@ function ENT:Think()
     end
 
     if not stuffNearby or nextFindNearby < CurTime() then
-        myTbl.nextFindNearby = CurTime() + math.Rand( 2, 4 )
+        myTbl.nextFindNearby = CurTime() + randScaled( 2, 4 )
         stuffNearby = ents.FindInSphere( myPos, findAllDist )
         myTbl.stuffNearby = stuffNearby
 
@@ -196,7 +231,7 @@ function ENT:Think()
         for _, potentialNode in ipairs( stuffNearby ) do
             if IsValid( potentialNode ) and GetClass( potentialNode ) == myClass and entMeta.GetPos( potentialNode ):DistToSqr( myPos ) < shareFindResultsDist then
                 potentialNode.stuffNearby = myTbl.stuffNearby
-                potentialNode.nextFindNearby = CurTime() + math.Rand( 2, 4 )
+                potentialNode.nextFindNearby = CurTime() + randScaled( 2, 4 )
 
             end
         end
@@ -232,22 +267,22 @@ function ENT:Think()
     end
     -- op tem is ation
     if not operatedOnNpc then
-        entMeta.NextThink( self, CurTime() + math.Rand( 8, 16 ) )
+        entMeta.NextThink( self, CurTime() + randScaled( 8, 16 ) )
         return true
 
     end
     if not isFighting then
-        entMeta.NextThink( self, CurTime() + math.Rand( 4, 8 ) )
+        entMeta.NextThink( self, CurTime() + randScaled( 4, 8 ) )
         return true
 
     end
     if not didSomething then
-        entMeta.NextThink( self, CurTime() + math.Rand( 0.25, 1.5 ) )
+        entMeta.NextThink( self, CurTime() + randScaled( 0.25, 1.5 ) )
         return true
 
     end
 
-    entMeta.NextThink( self, CurTime() + math.Rand( 0.2, 0.4 ) )
+    entMeta.NextThink( self, CurTime() + randScaled( 0.2, 0.4 ) )
     return true
 
 end
@@ -267,7 +302,7 @@ function ENT:OnBlocked( blocker )
 
         end
     end
-    self:NextThink( CurTime() + math.Rand( blockTime * 0.5, blockTime * 1.5 ) )
+    self:NextThink( CurTime() + randScaled( blockTime * 0.5, blockTime * 1.5 ) )
 
 end
 
@@ -481,7 +516,7 @@ function ENT:ManageNPC( npc )
             local justHadLos = ( npcsTbl.campaignents_NextAcquireLos or 0 ) > CurTime()
             if nodeCanSeeEnemy and not justHadLos then
                 self:MakeNPCGotoUs( npc )
-                npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 1, 2 ) + react
+                npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + randScaled( 1, 2 ) + react
                 npcsTbl.campaignents_NextFallbackMove = CurTime() + 20
 
             elseif nodeIsCloser and not justHadLos then
@@ -506,8 +541,8 @@ function ENT:ManageNPC( npc )
             else
                 -- going into great cover we can shoot from, wait a long time for the next movement
                 if greatSoftCover and nodeCanSeeEnemy then
-                    npcsTbl.campaignents_NextAcquireLos = CurTime() + math.Rand( 6, 8 ) + react
-                    npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + math.Rand( 8, 12 )
+                    npcsTbl.campaignents_NextAcquireLos = CurTime() + randScaled( 6, 8 ) + react
+                    npcsTbl.campaignents_NextMoveWhenSeeing = CurTime() + randScaled( 8, 12 )
                     npcsTbl.campaignents_NextFallbackMove = CurTime() + 25
 
                 else

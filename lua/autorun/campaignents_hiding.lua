@@ -17,6 +17,7 @@ CAMPAIGN_ENTS.oldMoveTypes = CAMPAIGN_ENTS.oldMoveTypes or {}
 local nextChecks = {}
 
 -- catches ULX noclip, etc. unlike the default hooks
+-- also the nextchecks system means people cant spam this too fast, lag the server!
 hook.Add( "FinishMove", "campaignents_detectnoclip", function( ply )
     local cur = CurTime()
     if ( nextChecks[ply] or 0 ) > cur then return end

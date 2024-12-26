@@ -24,10 +24,10 @@ local function ActiveNodrawManager()
 end
 
 function ENT:SetupDataTables()
-    self:NetworkVar( "Int", 1, "NodrawDistance",   { KeyName = "nodrawdistance",  Edit = { type = "Int", title = "Render Distance",   order = 1, min = 0, max = 10000 } } )
-    self:NetworkVar( "Int", 2, "MaxRadius",        { KeyName = "madradius",       Edit = { type = "Int", title = "Ent Size To Ignore",order = 2, min = 0, max = 10000 } } )
-    self:NetworkVar( "Int", 3, "Rate",             { KeyName = "rate",            Edit = { type = "Int", title = "Rate. Can lag.",    order = 3, min = 1, max = 100 } } )
-    self:NetworkVar( "Bool",4, "PropsOnly",        { KeyName = "propsonly",       Edit = { type = "Bool",title = "Only Affect Props", order = 4 } } )
+    self:NetworkVar( "Int",  1, "NodrawDistance",   { KeyName = "nodrawdistance",  Edit = { type = "Int", title = "Render Distance",   order = 1, min = 0, max = 10000 } } )
+    self:NetworkVar( "Int",  2, "MaxRadius",        { KeyName = "madradius",       Edit = { type = "Int", title = "Ent Size To Ignore",order = 2, min = 0, max = 10000 } } )
+    self:NetworkVar( "Int",  3, "Rate",             { KeyName = "rate",            Edit = { type = "Int", title = "Rate. Can lag.",    order = 3, min = 1, max = 100 } } )
+    self:NetworkVar( "Bool", 4, "PropsOnly",        { KeyName = "propsonly",       Edit = { type = "Bool",title = "Only Affect Props", order = 4 } } )
 
     if SERVER then
         self:SetMaxRadius( 250 )
@@ -107,6 +107,7 @@ function ENT:Operate( CurrentCount, FixingAllTramsit )
     local Players           = player.GetAll()
     local PlayerPositions   = Positions( Players )
     if not PlayerPositions then return end
+
     local CheckDistSqr      = self:GetNodrawDistance() ^ 2
     local Start             = OperateIndex
     local End               = math.Clamp( OperateIndex + self:GetRate(), 0, CurrentCount )

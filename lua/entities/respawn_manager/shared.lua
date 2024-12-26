@@ -32,7 +32,7 @@ function ENT:SetupDataTables()
 
     if SERVER then
         self:SetNeedsArmorIncrease( true )
-        self:SetNeedsHealthIncrease( false )
+        self:SetNeedsHealthIncrease( true )
         self:SetMinHealth( 50 )
         self:SetNeedsOnGround( true )
         self:SetStatsPersist( true )
@@ -43,6 +43,14 @@ end
 
 function ENT:OnDuplicated()
     self.duplicatedIn = true
+
+end
+
+local function wipeStatsFor( ply )
+    ply.respawnManagerRespawnPos = nil
+    ply.respawnManagerRespawnAngles = nil
+    ply.respawnManagerRespawnArmor = nil
+    ply.respawnManagerRespawnHealth = nil
 
 end
 
@@ -66,11 +74,33 @@ function ENT:Initialize()
     end
 end
 
-function ENT:SavePlyRespawnPos( ply )
-    ply.respawnManagerRespawnAngles = ply:LocalEyeAngles()
-    ply.respawnManagerRespawnPos    = ply:GetPos() + Vector( 0,0,10 )
-    ply.respawnManagerRespawnArmor  = ply:Armor()
-    ply.respawnManagerRespawnHealth = math.Clamp( ply:Health(), 40, math.huge )
+function ENT:SavePlyRespawnPos( ply, waitTime )
+    local currRespawnPos = ply:GetPos() + Vector( 0,0,10 )
+    local currRespawnAngles = ply:LocalEyeAngles()
+    local currRespawnArmor = ply:Armor()
+    local currRespawnHealth = math.Clamp( ply:Health(), 40, math.huge )
+    local startingDeaths = ply:Deaths()
+
+    timer.Simple( waitTime, function()
+        if not IsValid( self ) then return end -- we were removed
+        if not IsValid( ply ) then return end
+        if not ply:Alive() then return end -- they died
+        if ply:Deaths() > startingDeaths then return end -- they died and respawned
+
+        local currSpawn = {
+            pos = currRespawnPos,
+            ang = currRespawnAngles,
+            armor = currRespawnArmor,
+            health = currRespawnHealth,
+
+        }
+
+        ply.campents_RespawnPositions = ply.campents_RespawnPositions or {}
+
+        wipeStatsFor( ply ) -- force system to get a new respawn pos
+        table.insert( ply.campents_RespawnPositions, 1, currSpawn )
+
+    end )
 
     if IsValid( ply.campaignents_CurrCheckpoint ) and ply.campaignents_CurrCheckpoint:GetCanOverride() then
         ply.campaignents_CurrCheckpoint:unlinkPlayerToMe( ply )
@@ -84,18 +114,18 @@ function ENT:BlockerSetup()
 
     timer.Simple( 0.1, function()
         if not IsValid( self ) then return end
-        for _, currPly in ipairs( player.GetAll() ) do
+        for _, currPly in player.Iterator() do
             if currPly:Alive() then
-                self:SavePlyRespawnPos( currPly )
+                self:SavePlyRespawnPos( currPly, 0 )
 
             end
         end
     end )
     timer.Simple( 2, function()
         if not IsValid( self ) then return end
-        for _, currPly in ipairs( player.GetAll() ) do
+        for _, currPly in player.Iterator() do
             if currPly:Alive() then
-                self:SavePlyRespawnPos( currPly )
+                self:SavePlyRespawnPos( currPly, 10 )
 
             end
         end
@@ -111,6 +141,14 @@ function ENT:BlockerSetup()
     end
 end
 
+function ENT:OnRemove()
+    for _, ply in player.Iterator() do
+        ply.campents_RespawnPositions = nil
+        wipeStatsFor( ply )
+
+    end
+end
+
 function ENT:ManageRespawnPoint( ply )
     local currArmor         = ply:Armor()
     local oldArmor          = ply.respawnManagerOldSpawnPosArmor or 0
@@ -121,11 +159,13 @@ function ENT:ManageRespawnPoint( ply )
     local onGround          = ply:OnGround()
 
     local posSaveCriteriaMet = true
-    if self:GetNeedsArmorIncrease() then
+    if self:GetNeedsArmorIncrease() and self:GetNeedsHealthIncrease() then
+        posSaveCriteriaMet = posSaveCriteriaMet and ( increasedArmor or increasedHealth )
+
+    elseif self:GetNeedsArmorIncrease() then
         posSaveCriteriaMet = posSaveCriteriaMet and increasedArmor
 
-    end
-    if self:GetNeedsHealthIncrease() then
+    elseif self:GetNeedsHealthIncrease() then
         posSaveCriteriaMet = posSaveCriteriaMet and increasedHealth
 
     end
@@ -142,7 +182,7 @@ function ENT:ManageRespawnPoint( ply )
     local alive             = ply:Alive()
     local validSpawnPosSave = posSaveCriteriaMet and alive and not respawning
     if validSpawnPosSave then
-        self:SavePlyRespawnPos( ply )
+        self:SavePlyRespawnPos( ply, 10 )
         ply.respawnManagerOldSpawnPosArmor = currArmor
         ply.respawnManagerOldSpawnPosHealth = currHealth
 
@@ -161,7 +201,7 @@ function ENT:Think()
     if not SERVER then return end
     self:NextThink( CurTime() + 1 )
     if ActiveRespawnManager() then
-        for _, currPly in ipairs( player.GetAll() ) do
+        for _, currPly in player.Iterator() do
             if not currPly.respawnManagerPlayerIsDead then
                 self:ManageRespawnPoint( currPly )
 
@@ -174,17 +214,44 @@ end
 
 function ENT:SmartRespawnBail( ply )
     ply:PrintMessage( HUD_PRINTTALK, "Seems like the Dynamic Respawner put you somewhere that got you stuck.\nBAILING!" )
-    ply:SetPos( ply.respawnManagerBailPos )
 
+    local positions = ply.campents_RespawnPositions
+    if not positions then
+        ply:SetPos( ply.respawnManagerBailPos )
+        return -- stop
+
+    else
+        table.remove( positions, 1 )
+        wipeStatsFor( ply ) -- force system to get a new respawn pos
+        ply.respawnManagerTimeout = CurTime() + 3
+        return true -- keep going
+
+    end
 end
 
 local vecZero = Vector( 0, 0, 0 )
 
+-- return true to keep thinking
 function ENT:SmartRespawnThink( ply )
     if not IsValid( ply ) then return end
 
+    if not ply.respawnManagerRespawnPos then
+        local positions = ply.campents_RespawnPositions
+        if not positions then return end -- UH OH
+
+        local currData = positions[1]
+        if not currData then return end -- uh oh
+
+        ply.respawnManagerRespawnPos = currData.pos
+        ply.respawnManagerRespawnAngles = currData.ang
+        ply.respawnManagerRespawnArmor = currData.armor
+        ply.respawnManagerRespawnHealth = currData.health
+
+    end
+
+
     local plyPos = ply:GetPos()
-    -- 2d distance, so player can fall
+    -- 2d distance, so player can fall down
     local subtractionProduct = plyPos - ply.respawnManagerRespawnPos
     subtractionProduct.z = 0
 
@@ -194,9 +261,10 @@ function ENT:SmartRespawnThink( ply )
         ply.respawnManagerNeedsStatsSet = nil
         ply:SetEyeAngles( Angle( 0, ply.respawnManagerRespawnAngles[2], 0 ) )
 
-        if self:GetSpawnProtection() > 0 then
+        local protTime = self:GetSpawnProtection()
+        if protTime > 0 and not ply:HasGodMode() then
             ply:GodEnable()
-            timer.Simple( self:GetSpawnProtection(), function()
+            timer.Simple( protTime, function()
                 if not IsValid( ply ) then return end
                 ply:GodDisable()
 
@@ -211,15 +279,14 @@ function ENT:SmartRespawnThink( ply )
     end
     -- success and not stuck!
     if distToIdealSpawnPos < 100 and ply:IsOnGround() then
+        ply.respawnManagerRespawnPos = plyPos -- nudge the pos
         return
 
     end
 
-    if ply.respawnManagerTimeout < CurTime() then self:SmartRespawnBail( ply ) return end -- not able to teleport ply
-    if plyPos:Distance( vecZero ) < 100 then self:SmartRespawnBail( ply ) return end -- malformed spawnpos
+    if ply.respawnManagerTimeout < CurTime() then return self:SmartRespawnBail( ply ) end -- teleported them somewhere that got them stuck
 
     if ply:GetMoveType() == MOVETYPE_NOCLIP then return true end -- they noclipped
-    if IsValid( ply.campaignents_CurrCheckpoint ) then return true end -- keep stats but bail
     if distToIdealSpawnPos >= 100 then
         ply:SetPos( ply.respawnManagerRespawnPos )
 
@@ -264,14 +331,13 @@ hook.Add( "PlayerDeath", "respawn_manager_recordnotalive", function( ply )
 end )
 
 hook.Add( "PlayerSpawn", "respawn_manager_plyrespawn", function( ply, _ )
-    timer.Simple( engine.TickInterval(), function()
+    if not ActiveRespawnManager() then return end
+    timer.Simple( 0, function()
         if not IsValid( ply ) then return end
-        if not ply:Alive() then return end
         if not ply.respawnManagerPlayerIsDead then return end
+        if not ply:Alive() then return end
 
-        if ActiveRespawnManager() then
-            STRAW_RespawnManager:PlyInitializeRespawn( ply )
+        STRAW_RespawnManager:PlyInitializeRespawn( ply )
 
-        end
     end )
 end )

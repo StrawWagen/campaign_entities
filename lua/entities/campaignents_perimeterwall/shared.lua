@@ -8,6 +8,7 @@ else
     ENT.Base = "base_gmodentity" -- :(
 
 end
+DEFINE_BASECLASS( ENT.Base )
 
 ENT.Category    = "Campaign Entities"
 ENT.PrintName   = "Combine Perimeter Wall"
@@ -93,6 +94,7 @@ function ENT:SpawnFunction( spawner, tr )
     ent:SetPos( SpawnPos )
 
     if IsValid( spawner ) and spawner.EyeAngles then
+        ent:SetCreator( spawner )
         local flat = spawner:GetAimVector()
         flat.z = 0
         flat:Normalize()
@@ -165,7 +167,7 @@ function ENT:Initialize()
                     local originalPos = self:GetPos()
                     local myAngs = self:GetAngles()
 
-                    self:EmitSound( "physics/metal/metal_canister_impact_hard3.wav", 90, math.random( 40, 50 ) )
+                    self:EmitSound( "physics/metal/metal_canister_impact_hard3.wav", 90, math.random( 40, 50 ) ) -- clang!
                     local offsetFromThem = connectionOffsets[ theirClosest.attachId ]
                     local offsetFromMe = -connectionOffsets[ myClosest.attachId ]
                     offsetFromMe:Rotate( myAngs )
@@ -196,13 +198,12 @@ function ENT:Initialize()
 
         end )
 
+        if not WireLib then return end
+
+        self.Inputs = WireLib.CreateSpecialInputs( self, { "ForceStep", "On" }, { "NORMAL", "NORMAL" } )
+        self.Outputs = WireLib.CreateSpecialOutputs( self, { "StepsTaken" }, { "NORMAL" } )
+
     end
-
-    if not WireLib then return end
-
-    self.Inputs = Wire_CreateInputs( self, { "ForceStep", "On" } )
-    self.Outputs = Wire_CreateOutputs( self, { "StepsTaken" } )
-
 end
 
 function ENT:TriggerInput( iname, value )
@@ -269,7 +270,17 @@ function ENT:SelfSetup()
     end
 end
 
+function ENT:PreEntityCopy()
+    BaseClass.PreEntityCopy( self )
+    self:ResetSteps()
+
+end
+
 function ENT:OnDuplicated()
+    if BaseClass and BaseClass.OnDuplicated then -- wiremod...
+        BaseClass.OnDuplicated( self )
+
+    end
     self.duplicatedIn = true
     self:SetupSessionVars()
 
@@ -334,7 +345,7 @@ function ENT:DecideToTakeAStep()
 
     timer.Simple( 1, function()
         if not IsValid( self ) then return end
-        self.takingAStep = true
+        self.forcedStep = true
         self.stepType = 1
 
     end )
@@ -490,11 +501,6 @@ function ENT:Think()
     end
 end
 
-function ENT:PreEntityCopy()
-    self:ResetSteps()
-
-end
-
 function ENT:ResetSteps()
     self:SetPos( self:GetOriginalPos() )
     self:SetStep( 0 )
@@ -503,9 +509,13 @@ function ENT:ResetSteps()
     self.wasClosePly = false
     CAMPAIGN_ENTS.TrackPlyProximity( self, self:GetActivationDist() )
     self.stepsTaken = 0
-    if not WireLib then return end
-    Wire_TriggerOutput( self, "StepsTaken", self.stepsTaken )
 
+    if not WireLib then return end
+    timer.Simple( 0, function()
+        if not IsValid( self ) then return end
+        Wire_TriggerOutput( self, "StepsTaken", self.stepsTaken )
+
+    end )
 end
 
 function ENT:WallSlideStart()
