@@ -271,13 +271,16 @@ function ENT:SelfSetup()
 end
 
 function ENT:PreEntityCopy()
-    BaseClass.PreEntityCopy( self )
+    if BaseClass and BaseClass.PreEntityCopy then -- wiremod...
+        BaseClass.PreEntityCopy( self )
+
+    end
     self:ResetSteps()
 
 end
 
 function ENT:OnDuplicated()
-    if BaseClass and BaseClass.OnDuplicated then -- wiremod...
+    if BaseClass and BaseClass.OnDuplicated then
         BaseClass.OnDuplicated( self )
 
     end
