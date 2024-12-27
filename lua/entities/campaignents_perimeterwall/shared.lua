@@ -334,7 +334,6 @@ function ENT:DecideToTakeAStep()
     end
 
     local myClosest, theirClosest, theAttached = self:GetBestToAttachTo()
-
     if IsValid( theAttached ) and theAttached.takingAStep then return end
 
     if not myClosest and not theirClosest then self:DoStepLater() return end
@@ -346,8 +345,9 @@ function ENT:DecideToTakeAStep()
 
     if whereConnectionEndsUp:DistToSqr( theirClosestWorld ) > tooFar then self:DoStepLater() return end
 
-    timer.Simple( 1, function()
+    timer.Simple( math.Rand( 0.5, 1.5 ), function()
         if not IsValid( self ) then return end
+        self.takingAStep = true
         self.forcedStep = true
         self.stepType = 1
 

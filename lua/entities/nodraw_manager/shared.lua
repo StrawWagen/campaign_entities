@@ -126,7 +126,7 @@ end
 
 local function AboveRadius( Thing, Radius )
     if Radius == 0 then return nil end
-    if not isfunction( Thing.GetModelRadius ) then return nil end
+    if not Thing.GetModelRadius then return nil end
     local ThingRadius = Thing:GetModelRadius() or 0
     if ThingRadius < Radius then return nil end
     return true
