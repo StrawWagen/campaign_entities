@@ -87,15 +87,18 @@ function ENT:AdditionalInitialize()
 end
 
 function ENT:OnUsed( ply )
-    Wire_TriggerOutput( self, "Pressed", 1 )
-    timer.Simple( 0, function()
-        Wire_TriggerOutput( self, "Pressed", 0 )
+    if WireLib then
+        Wire_TriggerOutput( self, "Pressed", 1 )
+        timer.Simple( 0, function()
+            Wire_TriggerOutput( self, "Pressed", 0 )
 
-    end )
-    Wire_TriggerOutput( self, "LastUser", ply )
+        end )
+        Wire_TriggerOutput( self, "LastUser", ply )
 
-    self.UsedCount = self.UsedCount + 1
-    Wire_TriggerOutput( self, "UsedCount", self.UsedCount )
+        self.UsedCount = self.UsedCount + 1
+        Wire_TriggerOutput( self, "UsedCount", self.UsedCount )
+
+    end
 
     net.Start( "campaignents_readnote" )
         net.WriteEntity( self )

@@ -666,7 +666,7 @@ function ENT:WallLand()
 
 end
 
-local minDist = 350^2
+local minDist = 400^2
 
 -- get another wall thats close to us!
 function ENT:GetBestToAttachTo()
