@@ -87,6 +87,8 @@ function ENT:AdditionalInitialize()
 end
 
 function ENT:OnUsed( ply )
+    self.UsedCount = self.UsedCount + 1
+
     if WireLib then
         Wire_TriggerOutput( self, "Pressed", 1 )
         timer.Simple( 0, function()
@@ -94,8 +96,6 @@ function ENT:OnUsed( ply )
 
         end )
         Wire_TriggerOutput( self, "LastUser", ply )
-
-        self.UsedCount = self.UsedCount + 1
         Wire_TriggerOutput( self, "UsedCount", self.UsedCount )
 
     end
