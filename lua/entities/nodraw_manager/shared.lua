@@ -158,7 +158,7 @@ local recursivePreventExtent = 0
 local function RecursiveSetPreventTransmit( Thing, Player, StopTransmitting )
     if not IsValid( Thing ) or not IsValid( Player ) then return end
     if Player == Thing then return end
-    if StopTransmitting == Thing:GetPreventTransmit( Player ) then return end
+    if StopTransmitting == Thing:HasPreventTransmitReason( Player, "campents_nodraw_manager" ) then return end
     if recursivePreventExtent > 500 then return end
     recursivePreventExtent = recursivePreventExtent + 1
 
@@ -190,7 +190,7 @@ function ENT:DoDrawing( Thing, Players, PlayerPositions, CheckDistSqr, FixingAll
         local WithinDistance = DistanceSqr < CheckDistSqr
 
         if not DrawStates[ CreationId ] then
-            DrawStates[ CreationId ] = Thing:GetPreventTransmit()
+            DrawStates[ CreationId ] = Thing:HasPreventTransmitReason( Player, "campents_nodraw_manager" )
 
         end
         if WithinDistance or FixingAllTramsit then

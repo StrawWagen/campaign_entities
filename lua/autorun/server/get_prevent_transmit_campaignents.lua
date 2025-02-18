@@ -1,43 +1,17 @@
+CAMPAIGN_ENTS = CAMPAIGN_ENTS or {}
+
 local entMeta = FindMetaTable( "Entity" )
 local table_Count = table.Count
+BETTER_PREVENT_TRANSMIT = true
 
-CAMPAIGN_ENTS = CAMPAIGN_ENTS or {}
-CAMPAIGN_ENTS.GET_PREVENT_TRANSMITFIX = true
-
-entMeta._GPT_CampaignEnts_SetPreventTransmit = entMeta._GPT_CampaignEnts_SetPreventTransmit or entMeta.SetPreventTransmit
-entMeta.SetPreventTransmit = function( self, ply, bool ) -- backwards compat
-    if bool then
-        self:AddPreventTransmitReason( ply, "generic" )
-
-    else
-        self:RemovePreventTransmitReason( ply, "generic" )
-
-    end
-end
-
-
--- new stuff below
-
-entMeta.GetPreventTransmit = function( self, ply )
-    local preventTransmitList = self.campents_PreventTransmitList
-    if not preventTransmitList then
-        preventTransmitList = {}
-        self.campents_PreventTransmitList = preventTransmitList
-
-    end
-
-    local isPrevented = preventTransmitList[ply]
-    if isPrevented == nil then return false end -- was never prevent transmitted
-
-    return isPrevented
-end
+entMeta._BetterPreventTransmit_SetPreventTransmit = entMeta._BetterPreventTransmit_SetPreventTransmit or entMeta.SetPreventTransmit
 
 -- util func
-local function getPreventTransmitReasonsForPly( ent, ply )
-    local preventTransmitReasons = ent.campents_PreventTransmitReasons
+local function getPreventTransmitReasonsForPly( entsTbl, ply )
+    local preventTransmitReasons = entsTbl._BetterPreventTransmit_Reasons
     if not preventTransmitReasons then
         preventTransmitReasons = {}
-        ent.campents_PreventTransmitReasons = preventTransmitReasons
+        entsTbl._BetterPreventTransmit_Reasons = preventTransmitReasons
 
     end
 
@@ -53,37 +27,90 @@ local function getPreventTransmitReasonsForPly( ent, ply )
 end
 
 -- figure out if we should transmit or not after a reason was removed/added
-local function checkPreventTransmit( ent, ply, preventTransmitReasonsForPly )
-    local preventTransmitList = ent.campents_PreventTransmitList
-    if not preventTransmitList then
-        preventTransmitList = {}
-        ent.campents_PreventTransmitList = preventTransmitList
+local function checkPreventTransmit( ent, entsTbl, ply, preventTransmitReasonsForPly )
+    local transmitList = entsTbl._BetterPreventTransmit_List
+    if not transmitList then
+        transmitList = {}
+        entsTbl._BetterPreventTransmit_List = transmitList
 
     end
-    local oldState = preventTransmitList[ply]
+    local oldState = transmitList[ply]
     local newState = table_Count( preventTransmitReasonsForPly ) >= 1
+
     if oldState == newState then return end
 
-    hook.Run( "campaignents_SwitchedTransmit", ply, ent, newState )
+    hook.Run( "BetterPrevenTransmit_SwitchedTransmit", ply, ent, newState )
 
-    preventTransmitList[ply] = newState
-    return ent:_GPT_CampaignEnts_SetPreventTransmit( ply, newState )
+    transmitList[ply] = newState
+    return entMeta._BetterPreventTransmit_SetPreventTransmit( ent, ply, newState )
 
 end
 
+
+-- THE TWO FUNCTIONS IN QUESTION
 -- use these IF AT ALL POSSIBLE!
-entMeta.AddPreventTransmitReason = function( self, ply, reason )
-    local preventTransmitReasonsForPly = getPreventTransmitReasonsForPly( self, ply )
+-- add reason to prevent transmit, if a player has any reason, transmit is prevented
+function entMeta:AddPreventTransmitReason( ply, reason )
+    local myTbl = entMeta.GetTable( self )
+    local preventTransmitReasonsForPly = getPreventTransmitReasonsForPly( myTbl, ply )
 
     preventTransmitReasonsForPly[reason] = true
-    checkPreventTransmit( self, ply, preventTransmitReasonsForPly )
+    checkPreventTransmit( self, myTbl, ply, preventTransmitReasonsForPly )
 
 end
 
-entMeta.RemovePreventTransmitReason = function( self, ply, reason )
-    local preventTransmitReasonsForPly = getPreventTransmitReasonsForPly( self, ply )
+-- remove a reason
+function entMeta:RemovePreventTransmitReason( ply, reason )
+    local myTbl = entMeta.GetTable( self )
+    local preventTransmitReasonsForPly = getPreventTransmitReasonsForPly( myTbl, ply )
 
     preventTransmitReasonsForPly[reason] = nil
-    checkPreventTransmit( self, ply, preventTransmitReasonsForPly )
+    checkPreventTransmit( self, myTbl, ply, preventTransmitReasonsForPly )
 
+end
+
+
+-- util funcs
+function entMeta:GetPreventTransmit( ply )
+    local myTbl = entMeta.GetTable( self )
+    local preventTransmitList = myTbl.campents_PreventTransmitList
+    if not preventTransmitList then
+        preventTransmitList = {}
+        myTbl.campents_PreventTransmitList = preventTransmitList
+
+    end
+
+    local isPrevented = preventTransmitList[ply]
+    if not isPrevented then return false end -- was never prevent transmitted
+
+    return isPrevented, preventTransmitList
+
+end
+
+function entMeta:HasPreventTransmitReason( ply, reason )
+    local myTbl = entMeta.GetTable( self )
+    local preventTransmitReasonsForPly = getPreventTransmitReasonsForPly( myTbl, ply )
+
+    if not preventTransmitReasonsForPly then return false end
+
+    local has = preventTransmitReasonsForPly[reason]
+    if has == true then
+        return true
+
+    else
+        return false
+
+    end
+end
+
+
+-- crappy backwards compat
+entMeta.SetPreventTransmit = function( self, ply, bool )
+    if bool then
+        entMeta.AddPreventTransmitReason( self, ply, "generic" )
+
+    else
+        entMeta.RemovePreventTransmitReason( self, ply, "generic" )
+
+    end
 end
