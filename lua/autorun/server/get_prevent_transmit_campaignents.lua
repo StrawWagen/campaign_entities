@@ -1,7 +1,9 @@
+-- standalone ver https://github.com/StrawWagen/gm_better_preventransmit
+
 CAMPAIGN_ENTS = CAMPAIGN_ENTS or {}
 
 local entMeta = FindMetaTable( "Entity" )
-local table_Count = table.Count
+local pairs = pairs
 BETTER_PREVENT_TRANSMIT = true
 
 entMeta._BetterPreventTransmit_SetPreventTransmit = entMeta._BetterPreventTransmit_SetPreventTransmit or entMeta.SetPreventTransmit
@@ -35,7 +37,14 @@ local function checkPreventTransmit( ent, entsTbl, ply, preventTransmitReasonsFo
 
     end
     local oldState = transmitList[ply]
-    local newState = table_Count( preventTransmitReasonsForPly ) >= 1
+
+    local count = 0
+    for _ in pairs( preventTransmitReasonsForPly ) do
+        count = count + 1
+
+    end
+
+    local newState = count >= 1
 
     if oldState == newState then return end
 
@@ -47,7 +56,7 @@ local function checkPreventTransmit( ent, entsTbl, ply, preventTransmitReasonsFo
 end
 
 
--- THE TWO FUNCTIONS IN QUESTION
+-- THE FUNCTIONS IN QUESTION
 -- use these IF AT ALL POSSIBLE!
 -- add reason to prevent transmit, if a player has any reason, transmit is prevented
 function entMeta:AddPreventTransmitReason( ply, reason )
@@ -69,14 +78,29 @@ function entMeta:RemovePreventTransmitReason( ply, reason )
 
 end
 
+-- drop-in replacement
+function entMeta:SetPreventTransmitReason( ply, reason )
+    local myTbl = entMeta.GetTable( self )
+    local preventTransmitReasonsForPly = getPreventTransmitReasonsForPly( myTbl, ply )
+
+    if reason == true then
+        preventTransmitReasonsForPly[reason] = true
+
+    else -- so it works with nil or false
+        preventTransmitReasonsForPly[reason] = nil
+
+    end
+    checkPreventTransmit( self, myTbl, ply, preventTransmitReasonsForPly )
+
+end
 
 -- util funcs
 function entMeta:GetPreventTransmit( ply )
     local myTbl = entMeta.GetTable( self )
-    local preventTransmitList = myTbl.campents_PreventTransmitList
+    local preventTransmitList = myTbl._BetterPreventTransmit_PreventTransmitList
     if not preventTransmitList then
         preventTransmitList = {}
-        myTbl.campents_PreventTransmitList = preventTransmitList
+        myTbl._BetterPreventTransmit_PreventTransmitList = preventTransmitList
 
     end
 
