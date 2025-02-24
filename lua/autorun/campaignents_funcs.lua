@@ -79,11 +79,15 @@ function CAMPAIGN_ENTS.captureGoalID( self )
 
     end
 
+    local foundIt
+
     if not IsValid( theHit ) then
         local stuff = ents.FindInSphere( self:GetPos(), radius )
         for _, thing in ipairs( stuff ) do
             if thing ~= self and thing.GetGoalID then
                 theHit = thing
+                foundIt = true
+                break
 
             end
         end
@@ -92,9 +96,12 @@ function CAMPAIGN_ENTS.captureGoalID( self )
     if not IsValid( theHit ) then return end
     if not theHit.GetGoalID then return end
 
-    local dist = theHit:GetPos():Distance( self:GetPos() )
+    if foundIt then
+        local dist = theHit:GetPos():Distance( self:GetPos() )
 
-    if dist > 15 and self:GetGoalID() == -1 and theHit:GetGoalID() == -1 then return end
+        if dist > 15 and self:GetGoalID() == -1 and theHit:GetGoalID() == -1 then return end
+
+    end
 
     if self:GetGoalID() == -1 and theHit:GetGoalID() == -1 then
         local occupiedGoalIds = {}
@@ -113,9 +120,12 @@ function CAMPAIGN_ENTS.captureGoalID( self )
 
         end
 
-        self:SetGoalID( randId )
-        theHit:SetGoalID( randId )
-        self:EmitSound( "buttons/button24.wav" )
+        if randId then
+            self:SetGoalID( randId )
+            theHit:SetGoalID( randId )
+            self:EmitSound( "buttons/button24.wav" )
+
+        end
 
     elseif self:GetGoalID() ~= theHit:GetGoalID() then
         self:SetGoalID( theHit:GetGoalID() )

@@ -58,8 +58,8 @@ function ENT:SetupDataTables()
 
     self:NetworkVar( "Int",     6, "MyId",              { KeyName = "myid",                 Edit = { order = i + 1, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
     self:NetworkVar( "Int",     7, "IdToWaitFor",       { KeyName = "idtowaitfor",          Edit = { order = i + 1, type = "Int", min = -1, max = 1000, category = "Id conditions", waitforenter = true } } )
+    self:NetworkVar( "Int",     8, "GoalID",            { KeyName = "goalid",               Edit = { order = i + 1, type = "Int", min = -1, max = 10000, category = "Id conditions", waitforenter = true } } )
 
-    self:NetworkVar( "Int",     8, "GoalID",            { KeyName = "goalid",               Edit = { readonly = true } } )
     self:NetworkVar( "Bool",    4, "ShowGoalLinks",     { KeyName = "forcespawn",           Edit = { readonly = true } } )
     self:NetworkVar( "Entity",  31, "ProxyEnt",         { KeyName = "proxyEnt",             Edit = { readonly = true } } )
 
