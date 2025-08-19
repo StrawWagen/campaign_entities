@@ -97,10 +97,10 @@ end
 -- util funcs
 function entMeta:GetPreventTransmit( ply )
     local myTbl = entMeta.GetTable( self )
-    local preventTransmitList = myTbl._BetterPreventTransmit_PreventTransmitList
+    local preventTransmitList = myTbl._BetterPreventTransmit_List
     if not preventTransmitList then
         preventTransmitList = {}
-        myTbl._BetterPreventTransmit_PreventTransmitList = preventTransmitList
+        myTbl._BetterPreventTransmit_List = preventTransmitList
 
     end
 
