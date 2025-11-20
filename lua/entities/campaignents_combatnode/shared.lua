@@ -188,7 +188,7 @@ local npcMeta = FindMetaTable( "NPC" )
 function ENT:Think()
     if not SERVER then return end
 
-    local myTbl = self:GetTable()
+    local myTbl = entMeta.GetTable( self )
 
     local myPos = entMeta.GetPos( self )
     local nextFindNearby = myTbl.nextFindNearby or 0
@@ -248,7 +248,7 @@ function ENT:Think()
         if IsValid( currThing ) then
             local normalNpc = currThing.campaignents_combatNodeNormalNpc
             if normalNpc == nil then
-                normalNpc = currThing:IsNPC() and currThing.SetSchedule and currThing.GetMoveVelocity
+                normalNpc = currThing:IsNPC() and not currThing:IsNextBot()
                 currThing.campaignents_combatNodeNormalNpc = normalNpc
 
             end
@@ -351,7 +351,8 @@ local COND_LOW_AMMO = COND.LOW_PRIMARY_AMMO
 local COND_NO_AMMO = COND.NO_PRIMARY_AMMO
 
 function ENT:ManageNPC( npc )
-    local npcsTbl = npc:GetTable()
+    local npcsTbl = entMeta.GetTable( npc )
+    if not npcsTbl then return end -- invalid ent :(
     local busy = ( npcsTbl.campaignents_NextMove or 0 ) > CurTime()
     if busy then return end
     busy = npcMeta.GetMoveVelocity( npc ):LengthSqr() > busySpeed and npcMeta.GetPathTimeToGoal( npc ) > 0.25
