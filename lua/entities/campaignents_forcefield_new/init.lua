@@ -344,7 +344,7 @@ function ENT:Think()
 
         end
     end
-    self:NextThink( 0.25 )
+    self:NextThink( CurTime() + 0.1 )
     return true
 
 end
